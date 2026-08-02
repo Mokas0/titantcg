@@ -336,6 +336,11 @@
         return { ok: false, err: 'Choose a spell on the Order.' };
       return { ok: true };
     }
+    if (c.target === 'row') {
+      const r = targets.row;
+      if (!Number.isInteger(r) || r < 0 || r > 4) return { ok: false, err: 'Choose a row.' };
+      return { ok: true };
+    }
     const t = unit(g, targets.uid);
     if (!t) return { ok: false, err: 'Choose a target unit.' };
     if (c.target === 'ownUnit' && t.owner !== p) return { ok: false, err: 'Target a unit you control.' };
@@ -405,6 +410,28 @@
           log(g, `${c.name} deals ${e.n} damage to ${t.name}.`);
           checkDeaths(g, c.name);
         }
+        break;
+      case 'dmgRow': {
+        const foes = sideInRow(g, targets.row, other(p));
+        for (const f of foes) f.damage += e.n;
+        log(g, `${c.name} deals ${e.n} damage to each enemy unit in row ${targets.row + 1}` +
+          (foes.length ? '.' : ' — no one was there.'));
+        checkDeaths(g, c.name);
+        break;
+      }
+      case 'drain':
+        if (t) {
+          t.damage += e.n;
+          g.players[p].life += e.n;
+          log(g, `${c.name} drains ${e.n} from ${t.name} — ${playerName(p)} rises to ${g.players[p].life} life.`);
+          checkDeaths(g, c.name);
+        }
+        break;
+      case 'painDraw':
+        drawCards(g, p, e.n);
+        g.players[p].life -= e.life;
+        log(g, `${playerName(p)} draws ${e.n} cards and pays ${e.life} life (${Math.max(0, g.players[p].life)}).`);
+        if (g.players[p].life <= 0) setWinner(g, other(p), 'life reached 0');
         break;
       case 'dmgPlayer': {
         const foe = other(p);

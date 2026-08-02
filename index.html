@@ -24,6 +24,19 @@
     <div class="setup-col" id="deck-col-1"><h3>Player Two's deck</h3></div>
   </div>
   <button class="primary" id="startbtn">Begin the Uprising</button>
+
+  <div class="setup-row" style="margin-top:24px">
+    <div class="setup-col">
+      <h3>Booster packs</h3>
+      <div id="packinfo" class="packinfo"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="openpack" class="primary">Open a pack</button>
+        <button id="togglecollection">View collection</button>
+      </div>
+      <div class="packinfo sub-note">Finish any game to earn 2 more packs.</div>
+    </div>
+  </div>
+  <div id="collection" style="display:none"></div>
 </div>
 
 <!-- ========== Game screen ========== -->
@@ -66,6 +79,15 @@
     <div class="actions">
       <button id="orderpass" class="primary">Pass — let it resolve</button>
     </div>
+  </div>
+</div>
+
+<!-- Booster pack reveal -->
+<div class="overlay" id="packmodal">
+  <div class="box wide">
+    <h2>Booster Pack</h2>
+    <div id="packcards" class="pack-grid"></div>
+    <div class="actions"><button id="packdone" class="primary">Add to collection</button></div>
   </div>
 </div>
 

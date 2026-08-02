@@ -16,8 +16,22 @@ Two modes:
 - **Hotseat** — two players sharing one screen (a pass-device overlay separates turns).
 - **Solo** — you play Player Two against a simple AI running Player One.
 
-Six prebuilt 40-card mono-faction decks are included (Fire, Water, Nature, Earth, Light,
-Dark), each with its own Leader, plus a Void Rift energy in every deck.
+Six prebuilt 54-card mono-faction decks are included (Fire, Water, Nature, Earth, Light,
+Dark), each with its own Leader, plus a Void Rift energy in every deck. The decks are
+generated from the full card pool: commons ×3, uncommons ×2, rares ×1, and one titan each.
+
+## Rarities, packs, and your collection
+
+The pool holds **96 collectible cards** across four rarities — **common**, **uncommon**,
+**rare**, and **titan** (one colossal signature card per faction, plus Entropy for Void).
+Rarity is shown as a colored edge and tag on every card.
+
+The main menu has a **booster pack** opener: each pack holds 8 cards — 5 commons,
+2 uncommons, and a rare slot with a 15% chance to upgrade to a titan. You start with
+5 packs and earn 2 more every time you finish a game. Your collection is saved in the
+browser (localStorage) and can be browsed per faction from the menu. Packs are a
+collection meta-game for now — the prebuilt decks already showcase the whole pool, and a
+deck builder is the natural next step.
 
 ## How a turn plays
 

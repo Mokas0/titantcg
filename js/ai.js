@@ -81,6 +81,14 @@
         if (c.type === 'action') {
           if (k === 'draw' || k === 'rampEnergy') res = E.playCard(g, p, i, {});
           else if (k === 'tokens') res = E.playCard(g, p, i, {});
+          else if (k === 'dmgRow') {
+            let best = null, bestCount = 0;
+            for (let r = 0; r < 5; r++) {
+              const n = E.sideInRow(g, r, E.other(p)).length;
+              if (n > bestCount) { best = r; bestCount = n; }
+            }
+            if (best !== null && bestCount >= 2) res = E.playCard(g, p, i, { targets: { row: best } });
+          }
           else if (k === 'sacDraw') {
             const chaff = g.units.filter(u => u.owner === p && E.effAtk(g, u) <= 1 && !u.isLeader);
             if (chaff.length > 0) res = E.playCard(g, p, i, { targets: { uid: chaff[0].uid } });
@@ -96,9 +104,12 @@
         } else if (c.type === 'spell') {
           // Cast damage/removal in main1 so the target can't profitably block.
           let targets = null;
-          if (k === 'dmgUnit') {
+          if (k === 'dmgUnit' || k === 'drain') {
             const t = bestEnemyTarget(g, p);
-            if (t && E.remainingDef(g, t) <= c.effect.n) targets = { uid: t.uid };
+            if (t && (E.remainingDef(g, t) <= c.effect.n ||
+                      (k === 'drain' && g.players[p].life <= 12))) targets = { uid: t.uid };
+          } else if (k === 'painDraw') {
+            if (g.players[p].life > 10) targets = {};
           } else if (k === 'destroy' || (k === 'buff' && c.target === 'enemyUnit')) {
             const t = bestEnemyTarget(g, p);
             if (t && (k !== 'destroy' || unitValue(g, t) >= 3)) targets = { uid: t.uid };

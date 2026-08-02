@@ -47,6 +47,42 @@ h1, h2, h3 { font-weight: 600; }
 .mode-btn.selected, .deck-btn.selected { border-color: var(--accent); background: #2c2a20; }
 .deck-btn .sub { color: var(--muted); font-size: 12px; }
 
+/* ---------- Rarities ---------- */
+:root {
+  --r-common: #8a90a0; --r-uncommon: #57a05a; --r-rare: #3f8fd4; --r-titan: #d4b465;
+}
+.card.rarity-common { border-left: 3px solid var(--r-common); }
+.card.rarity-uncommon { border-left: 3px solid var(--r-uncommon); }
+.card.rarity-rare { border-left: 3px solid var(--r-rare); }
+.card.rarity-titan { border-left: 3px solid var(--r-titan); box-shadow: 0 0 8px rgba(212, 180, 101, 0.25); }
+.rtag { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+.rtag.common { color: var(--r-common); }
+.rtag.uncommon { color: var(--r-uncommon); }
+.rtag.rare { color: var(--r-rare); }
+.rtag.titan { color: var(--r-titan); }
+
+/* ---------- Packs & collection (setup screen) ---------- */
+.packinfo { color: var(--muted); margin-bottom: 10px; }
+.packinfo b { color: var(--accent); font-size: 16px; }
+.sub-note { font-size: 11px; margin-top: 8px; }
+.overlay .box.wide { max-width: 940px; }
+.pack-grid { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.pack-grid .card { cursor: default; }
+.pack-grid .card.facedown {
+  background: repeating-linear-gradient(135deg, #232733, #232733 8px, #1d2028 8px, #1d2028 16px);
+  min-height: 110px; cursor: pointer; border-color: var(--accent);
+  display: flex; align-items: center; justify-content: center; color: var(--accent);
+  font-weight: 700; letter-spacing: 2px;
+}
+#collection {
+  margin-top: 18px; border-top: 1px solid var(--line); padding-top: 12px;
+}
+#collection h3 { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+.coll-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.coll-group .card { cursor: default; }
+.coll-group .card.unowned { opacity: 0.3; }
+.coll-count { float: right; color: var(--accent); font-weight: 700; }
+
 /* ---------- Game layout ---------- */
 #game { display: none; max-width: 1180px; margin: 0 auto; padding: 10px 14px 220px; }
 #topbar {

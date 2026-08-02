@@ -5,6 +5,9 @@
   const AI = globalThis.AI;
   const CARDS = globalThis.TCG_CARDS;
   const DECKS = globalThis.TCG_DECKS;
+  const PACK = globalThis.TCG_PACK;
+  const COLLECTIBLES = globalThis.TCG_COLLECTIBLES;
+  const costSymbols = globalThis.TCG_COST_SYMBOLS;
 
   let G = null;
   const settings = { mode: 'hotseat', factions: ['fire', 'water'] };
@@ -18,7 +21,43 @@
     directInit: false,
     aiWaitingDefense: false,
     aiBusy: false,
+    packsAwarded: false,
   };
+
+  /* ---------- Collection & packs (persisted per device) ---------- */
+
+  const STORE_KEY = 'titanrule.collection.v1';
+  function loadCollection() {
+    try {
+      const d = JSON.parse(localStorage.getItem(STORE_KEY));
+      if (d && typeof d === 'object') {
+        return { packs: Number.isInteger(d.packs) ? d.packs : 5, cards: d.cards || {} };
+      }
+    } catch (e) { /* first run or storage unavailable */ }
+    return { packs: 5, cards: {} };
+  }
+  const collection = loadCollection();
+  function saveCollection() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(collection)); } catch (e) { /* ok */ }
+  }
+
+  function rollPack() {
+    const byRarity = {};
+    for (const id of COLLECTIBLES) {
+      const r = CARDS[id].rarity;
+      (byRarity[r] = byRarity[r] || []).push(id);
+    }
+    const pull = r => byRarity[r][Math.floor(Math.random() * byRarity[r].length)];
+    const cards = [];
+    for (const slot of PACK.slots) {
+      for (let i = 0; i < slot.count; i++) {
+        let r = slot.rarity;
+        if (slot.upgradeTo && Math.random() < slot.upgradeChance) r = slot.upgradeTo;
+        cards.push(pull(r));
+      }
+    }
+    return cards;
+  }
 
   const $ = id => document.getElementById(id);
   const el = (tag, cls, html) => {
@@ -72,9 +111,87 @@
     renderAll();
   }
 
-  /* ---------- Setup screen ---------- */
+  /* Shared card face for hand / packs / collection. */
+  function cardFace(c, opts = {}) {
+    const d = el('div', `card rarity-${c.rarity}` + (opts.extraClass ? ' ' + opts.extraClass : ''));
+    let stats = '';
+    if (c.type === 'unit' || c.type === 'leader') stats = ` <span class="cstats">${c.atk}/${c.def}</span>`;
+    d.innerHTML =
+      `<div class="cname">${esc(c.name)}${stats}${opts.count !== undefined ? `<span class="coll-count">×${opts.count}</span>` : ''}</div>` +
+      `<div class="ctype">${esc(c.type)} ${costHtml(c.cost)} <span class="rtag ${c.rarity}">${esc(c.rarity)}</span></div>` +
+      (c.text ? `<div class="ctext">${esc(c.text)}</div>` : '');
+    return d;
+  }
+
+  /* ---------- Setup screen: packs & collection ---------- */
+
+  function renderPacks() {
+    $('packinfo').innerHTML =
+      `You have <b>${collection.packs}</b> unopened pack${collection.packs === 1 ? '' : 's'} · ` +
+      `${Object.values(collection.cards).reduce((a, b) => a + b, 0)} cards collected`;
+    $('openpack').disabled = collection.packs <= 0;
+    if ($('collection').style.display !== 'none') renderCollection();
+  }
+
+  function openPack() {
+    if (collection.packs <= 0) return;
+    collection.packs--;
+    const pulls = rollPack();
+    for (const id of pulls) collection.cards[id] = (collection.cards[id] || 0) + 1;
+    saveCollection();
+    const grid = $('packcards');
+    grid.replaceChildren();
+    for (const id of pulls) {
+      const c = CARDS[id];
+      const down = el('div', 'card facedown', 'TITANRULE');
+      down.style.minWidth = '138px';
+      down.onclick = () => { grid.replaceChild(cardFace(c), down); };
+      grid.appendChild(down);
+    }
+    $('packmodal').style.display = 'flex';
+    renderPacks();
+  }
+
+  const FACTION_ORDER = [
+    ['F', 'Fire'], ['W', 'Water'], ['N', 'Nature'], ['E', 'Earth'],
+    ['L', 'Light'], ['D', 'Dark'], [null, 'Void'],
+  ];
+  const RARITY_ORDER = { titan: 0, rare: 1, uncommon: 2, common: 3 };
+
+  function renderCollection() {
+    const box = $('collection');
+    box.replaceChildren();
+    for (const [sym, label] of FACTION_ORDER) {
+      const ids = COLLECTIBLES.filter(id => {
+        const syms = costSymbols(CARDS[id]);
+        return sym === null ? syms.length === 0 : (syms.length === 1 && syms[0] === sym);
+      }).sort((a, b) =>
+        (RARITY_ORDER[CARDS[a].rarity] - RARITY_ORDER[CARDS[b].rarity]) ||
+        (E.costTotal(CARDS[a].cost) - E.costTotal(CARDS[b].cost)));
+      if (ids.length === 0) continue;
+      const owned = ids.filter(id => collection.cards[id]).length;
+      box.appendChild(el('h3', '', `${label} — ${owned}/${ids.length} collected`));
+      const group = el('div', 'coll-group');
+      for (const id of ids) {
+        const n = collection.cards[id] || 0;
+        group.appendChild(cardFace(CARDS[id], { count: n, extraClass: n === 0 ? 'unowned' : '' }));
+      }
+      box.appendChild(group);
+    }
+  }
+
+  $('openpack').onclick = openPack;
+  $('packdone').onclick = () => { $('packmodal').style.display = 'none'; renderPacks(); };
+  $('togglecollection').onclick = () => {
+    const box = $('collection');
+    const show = box.style.display === 'none';
+    box.style.display = show ? 'block' : 'none';
+    $('togglecollection').textContent = show ? 'Hide collection' : 'View collection';
+    if (show) renderCollection();
+  };
 
   function buildSetup() {
+    renderPacks();
     document.querySelectorAll('.mode-btn').forEach(b => {
       b.classList.toggle('selected', b.dataset.mode === settings.mode);
       b.onclick = () => { settings.mode = b.dataset.mode; buildSetup(); };
@@ -98,7 +215,7 @@
       { ai: [settings.mode === 'ai', false] });
     Object.assign(ui, { mode: 'idle', handIdx: null, targetCard: null, moveUid: null,
       respContext: null, directSel: new Set(), directInit: false,
-      aiWaitingDefense: false, aiBusy: false });
+      aiWaitingDefense: false, aiBusy: false, packsAwarded: false });
     $('setup').style.display = 'none';
     $('game').style.display = 'block';
     $('handwrap').style.display = 'block';
@@ -264,6 +381,7 @@
       let highlight = false;
       if ((ui.mode === 'deploy' || ui.mode === 'deployLeader') &&
           E.deployRows(viewPlayer()).includes(r)) highlight = true;
+      if (ui.mode === 'target' && ui.targetCard && ui.targetCard.target === 'row') highlight = true;
       if (ui.moveUid && moveRows.includes(r)) highlight = true;
       if (highlight) {
         row.classList.add('highlight');
@@ -275,6 +393,10 @@
 
   function clickRow(r) {
     const p = viewPlayer();
+    if (ui.mode === 'target' && ui.targetCard && ui.targetCard.target === 'row') {
+      completeRowTarget(r);
+      return;
+    }
     if (ui.mode === 'deploy' && ui.handIdx !== null) {
       const res = E.playCard(G, p, ui.handIdx, { row: r });
       if (!res.ok) { banner(res.err); return; }
@@ -318,13 +440,10 @@
     pl.hand.forEach((id, i) => {
       const c = CARDS[id];
       const playable = cardPlayable(p, c);
-      const d = el('div', 'card' + (playable ? '' : ' unplayable') + (ui.handIdx === i && ui.mode !== 'idle' ? ' selected' : ''));
-      let stats = '';
-      if (c.type === 'unit' || c.type === 'leader') stats = ` <span class="cstats">${c.atk}/${c.def}</span>`;
-      d.innerHTML =
-        `<div class="cname">${esc(c.name)}${stats}</div>` +
-        `<div class="ctype">${esc(c.type)} ${costHtml(c.cost)}</div>` +
-        (c.text ? `<div class="ctext">${esc(c.text)}</div>` : '');
+      const d = cardFace(c, {
+        extraClass: (playable ? '' : 'unplayable') +
+          (ui.handIdx === i && ui.mode !== 'idle' ? ' selected' : ''),
+      });
       if (playable) d.onclick = () => clickHandCard(p, i, c);
       hand.appendChild(d);
     });
@@ -389,6 +508,27 @@
     if (c.type === 'spell') { castAndRunOrder(p, i, { uid }); return; }
     if (c.type === 'augment') res = E.playCard(G, p, i, { targetUid: uid });
     else res = E.playCard(G, p, i, { targets: { uid } });
+    if (!res.ok) banner(res.err);
+    renderAll();
+  }
+
+  function completeRowTarget(row) {
+    const c = ui.targetCard;
+    const i = ui.handIdx;
+    clearBanner();
+    if (ui.respContext) {
+      const { player, handIdx } = ui.respContext;
+      ui.mode = 'idle'; ui.handIdx = null; ui.targetCard = null; ui.respContext = null;
+      const res = E.castSpell(G, player, handIdx, { row });
+      if (!res.ok) { banner(res.err); showOrderModal(player); return; }
+      renderAll();
+      runOrderLoop();
+      return;
+    }
+    ui.mode = 'idle'; ui.handIdx = null; ui.targetCard = null;
+    const p = viewPlayer();
+    if (c.type === 'spell') { castAndRunOrder(p, i, { row }); return; }
+    const res = E.playCard(G, p, i, { targets: { row } });
     if (!res.ok) banner(res.err);
     renderAll();
   }
@@ -671,8 +811,14 @@
   $('passcontinue').onclick = () => { $('passoverlay').style.display = 'none'; renderAll(); };
 
   function showGameOver() {
+    if (!ui.packsAwarded) {
+      ui.packsAwarded = true;
+      collection.packs += 2;
+      saveCollection();
+    }
     $('gameovermsg').textContent = `${E.playerName(G.winner)} rules the board!`;
-    $('gameoversub').textContent = `Victory: ${G.winReason}. The caste system trembles.`;
+    $('gameoversub').textContent =
+      `Victory: ${G.winReason}. The caste system trembles. +2 booster packs earned — open them from the main menu.`;
     $('gameover').style.display = 'flex';
   }
   $('rematch').onclick = backToSetup;
