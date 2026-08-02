@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Titanrule — Simulator</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ========== Setup screen ========== -->
+<div id="setup">
+  <h1>TITANRULE</h1>
+  <div class="tagline">A game of castes, rows, and the people breaking both. — comprehensive rules draft v0.1 simulator</div>
+  <div class="setup-row">
+    <div class="setup-col">
+      <h3>Mode</h3>
+      <button class="mode-btn" data-mode="hotseat">Hotseat — two players, one screen</button>
+      <button class="mode-btn" data-mode="ai">Solo — you (Player Two) vs AI (Player One)</button>
+    </div>
+  </div>
+  <div class="setup-row">
+    <div class="setup-col" id="deck-col-0"><h3>Player One's deck</h3></div>
+    <div class="setup-col" id="deck-col-1"><h3>Player Two's deck</h3></div>
+  </div>
+  <button class="primary" id="startbtn">Begin the Uprising</button>
+</div>
+
+<!-- ========== Game screen ========== -->
+<div id="game">
+  <div id="topbar">
+    <span class="title">TITANRULE</span>
+    <span id="phasebar"></span>
+    <button id="concede">Concede / New Game</button>
+  </div>
+  <div id="banner"></div>
+  <div class="layout">
+    <div class="main-col">
+      <div id="pstats-0"></div>
+      <div id="board"></div>
+      <div id="pstats-1"></div>
+      <div id="assignpanel"></div>
+    </div>
+    <div class="side-col">
+      <div id="logpanel"><h3>Game log</h3><div id="log"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Hand + controls (fixed bottom) -->
+<div id="handwrap" style="display:none">
+  <div class="hand-head">
+    <span id="hand-owner"></span>
+    <div id="controls"></div>
+  </div>
+  <div id="hand"></div>
+</div>
+
+<!-- The Order (response) modal -->
+<div class="overlay" id="ordermodal">
+  <div class="box">
+    <h2>The Order</h2>
+    <div id="orderstack"></div>
+    <div id="orderprompt"></div>
+    <div class="resp-list" id="resplist"></div>
+    <div class="actions">
+      <button id="orderpass" class="primary">Pass — let it resolve</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pass-device overlay (hotseat) -->
+<div class="overlay" id="passoverlay">
+  <div class="box">
+    <div class="bigmsg" id="passmsg"></div>
+    <div class="sub">Pass the device, then continue.</div>
+    <div class="actions"><button class="primary" id="passcontinue">Begin turn</button></div>
+  </div>
+</div>
+
+<!-- Game over overlay -->
+<div class="overlay" id="gameover">
+  <div class="box">
+    <div class="bigmsg" id="gameovermsg"></div>
+    <div class="sub" id="gameoversub"></div>
+    <div class="actions"><button class="primary" id="rematch">New game</button></div>
+  </div>
+</div>
+
+<script src="js/cards.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
