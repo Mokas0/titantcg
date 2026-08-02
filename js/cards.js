@@ -265,6 +265,144 @@
   def({ id: 'leader_dark', name: 'Morvane, the Unchained', type: 'leader', cost: { D: 2, G: 1 },
         atk: 4, def: 3, unique: true, rarity: 'leader', text: '' });
 
+  /* ================= EXPANSION: The Broken Ladder ================= */
+
+  /* ---- Fire ---- */
+  def({ id: 'cinder_sprite', name: 'Cinder Sprite', type: 'unit', cost: { F: 1 }, atk: 1, def: 1,
+        keywords: ['hasty'], text: 'Hasty.' });
+  def({ id: 'ash_hound', name: 'Ash Hound', type: 'unit', cost: { F: 2 }, atk: 3, def: 2,
+        keywords: ['hasty'], text: 'Hasty.' });
+  def({ id: 'kindle', name: 'Kindle', type: 'spell', cost: { F: 1 },
+        effect: { kind: 'dmgUnit', n: 1 }, target: 'anyUnit', text: 'Deal 1 damage to target unit.' });
+  def({ id: 'blaze_knight', name: 'Blaze Knight', type: 'unit', cost: { F: 2, G: 1 }, atk: 4, def: 3,
+        rarity: 'uncommon', keywords: ['hasty'], text: 'Hasty.' });
+  def({ id: 'magma_serpent', name: 'Magma Serpent', type: 'unit', cost: { F: 3, G: 2 }, atk: 5, def: 5,
+        rarity: 'uncommon', text: '' });
+  def({ id: 'avatar_cinders', name: 'Avatar of Cinders', type: 'unit', cost: { F: 3, G: 3 }, atk: 6, def: 5,
+        rarity: 'rare', keywords: ['hasty'], text: 'Hasty.' });
+  def({ id: 'volkran', name: 'Volkran, Furnace Colossus', type: 'unit', cost: { F: 5, G: 3 }, atk: 9, def: 6,
+        rarity: 'titan', keywords: ['hasty'], text: 'Hasty.' });
+
+  /* ---- Water ---- */
+  def({ id: 'pearl_diver', name: 'Pearl Diver', type: 'unit', cost: { W: 1, G: 1 }, atk: 2, def: 2, text: '' });
+  def({ id: 'stream_spirit', name: 'Stream Spirit', type: 'unit', cost: { W: 1 }, atk: 1, def: 2,
+        move: 2, keywords: ['swift'], text: 'Swift.' });
+  def({ id: 'soothing_springs', name: 'Soothing Springs', type: 'spell', cost: { W: 1 },
+        effect: { kind: 'heal', n: 2 }, target: 'anyUnit', text: 'Remove 2 damage from target unit.' });
+  def({ id: 'tempest_caller', name: 'Tempest Caller', type: 'unit', cost: { W: 3, G: 1 }, atk: 4, def: 4,
+        rarity: 'uncommon', text: '' });
+  def({ id: 'whirlpool', name: 'Whirlpool', type: 'spell', cost: { W: 2, G: 1 },
+        rarity: 'uncommon', effect: { kind: 'push', n: 2 }, target: 'enemyUnit',
+        text: "Move target enemy unit 2 rows toward its owner's edge." });
+  def({ id: 'abyssal_tyrant', name: 'Abyssal Tyrant', type: 'unit', cost: { W: 4, G: 2 }, atk: 6, def: 7,
+        rarity: 'rare', text: '' });
+  def({ id: 'okeanos', name: 'Okeanos, the World-Tide', type: 'unit', cost: { W: 5, G: 4 }, atk: 8, def: 9,
+        rarity: 'titan', text: '' });
+
+  /* ---- Nature ---- */
+  def({ id: 'timber_wolf', name: 'Timber Wolf', type: 'unit', cost: { N: 1, G: 1 }, atk: 3, def: 2, text: '' });
+  def({ id: 'grazing_titanoth', name: 'Grazing Titanoth', type: 'unit', cost: { N: 2, G: 1 }, atk: 2, def: 5, text: '' });
+  def({ id: 'sap_surge', name: 'Sap Surge', type: 'spell', cost: { N: 1 },
+        effect: { kind: 'buff', a: 1, d: 1, temp: true }, target: 'ownUnit',
+        text: 'Target unit you control gets +1/+1 until end of turn.' });
+  def({ id: 'ancient_of_vines', name: 'Ancient of Vines', type: 'unit', cost: { N: 3, G: 2 }, atk: 4, def: 6,
+        rarity: 'uncommon', text: '' });
+  def({ id: 'verdant_champion', name: 'Verdant Champion', type: 'unit', cost: { N: 2, G: 2 }, atk: 5, def: 4,
+        rarity: 'uncommon', text: '' });
+  def({ id: 'heartwood_grove', name: 'Heartwood Grove', type: 'location', cost: { N: 3, G: 2 },
+        rarity: 'rare', effect: { kind: 'location', a: 1, d: 1 }, target: null, text: 'Units you control get +1/+1.' });
+  def({ id: 'gaiathar', name: 'Gaiathar, First Forest', type: 'unit', cost: { N: 5, G: 4 }, atk: 10, def: 11,
+        rarity: 'titan', text: '' });
+
+  /* ---- Earth ---- */
+  def({ id: 'shale_skirmisher', name: 'Shale Skirmisher', type: 'unit', cost: { E: 2 }, atk: 3, def: 3, text: '' });
+  def({ id: 'tunnel_digger', name: 'Tunnel Digger', type: 'unit', cost: { E: 1 }, atk: 1, def: 3, text: '' });
+  def({ id: 'brace', name: 'Brace', type: 'spell', cost: { E: 1, G: 1 },
+        effect: { kind: 'buff', a: 0, d: 4, temp: true }, target: 'ownUnit',
+        text: 'Target unit you control gets +0/+4 until end of turn.' });
+  def({ id: 'obsidian_warden', name: 'Obsidian Warden', type: 'unit', cost: { E: 3, G: 2 }, atk: 4, def: 7,
+        rarity: 'uncommon', keywords: ['guard'], text: 'Guard.' });
+  def({ id: 'landslide', name: 'Landslide', type: 'action', cost: { E: 3, G: 2 },
+        rarity: 'uncommon', effect: { kind: 'dmgRow', n: 2 }, target: 'row',
+        text: 'Deal 2 damage to each enemy unit in target row.' });
+  def({ id: 'ramparts_low_city', name: 'Ramparts of the Low City', type: 'location', cost: { E: 3, G: 3 },
+        rarity: 'rare', effect: { kind: 'location', a: 0, d: 2 }, target: null, text: 'Units you control get +0/+2.' });
+  def({ id: 'korrun', name: 'Korrun, the Unmoved', type: 'unit', cost: { E: 5, G: 4 }, atk: 7, def: 12,
+        rarity: 'titan', keywords: ['guard'], text: 'Guard.' });
+
+  /* ---- Light ---- */
+  def({ id: 'vanguard_squire', name: 'Vanguard Squire', type: 'unit', cost: { L: 1 }, atk: 1, def: 3, text: '' });
+  def({ id: 'lance_corporal', name: 'Lance Corporal', type: 'unit', cost: { L: 2, G: 1 }, atk: 4, def: 2, text: '' });
+  def({ id: 'prayer_of_ranks', name: 'Prayer of the Ranks', type: 'action', cost: { L: 1, G: 1 },
+        effect: { kind: 'gainLife', n: 4 }, target: null, text: 'You gain 4 life.' });
+  def({ id: 'exemplar_of_duty', name: 'Exemplar of Duty', type: 'unit', cost: { L: 3, G: 1 }, atk: 5, def: 4,
+        rarity: 'uncommon', text: '' });
+  def({ id: 'sun_shield', name: 'Sun Shield', type: 'augment', cost: { L: 1, G: 1 },
+        rarity: 'uncommon', effect: { kind: 'augment', a: 0, d: 3 }, target: 'ownUnit', text: 'Attached unit gets +0/+3.' });
+  def({ id: 'sunburst_avatar', name: 'Sunburst Avatar', type: 'unit', cost: { L: 4, G: 2 }, atk: 6, def: 6,
+        rarity: 'rare', text: '' });
+  def({ id: 'aurelion', name: 'Aurelion, the Summit Throne', type: 'unit', cost: { L: 5, G: 4 }, atk: 8, def: 9,
+        rarity: 'titan', text: '' });
+
+  /* ---- Dark ---- */
+  def({ id: 'crypt_lurker', name: 'Crypt Lurker', type: 'unit', cost: { D: 2, G: 1 }, atk: 3, def: 3, text: '' });
+  def({ id: 'bleed', name: 'Bleed', type: 'spell', cost: { D: 1, G: 1 },
+        effect: { kind: 'dmgUnit', n: 2 }, target: 'anyUnit', text: 'Deal 2 damage to target unit.' });
+  def({ id: 'night_prowler', name: 'Night Prowler', type: 'unit', cost: { D: 1, G: 1 }, atk: 3, def: 1, text: '' });
+  def({ id: 'gravemarsh_ghoul', name: 'Gravemarsh Ghoul', type: 'unit', cost: { D: 2, G: 2 }, atk: 4, def: 4,
+        rarity: 'uncommon', text: '' });
+  def({ id: 'death_toll', name: 'Death Toll', type: 'spell', cost: { D: 2, G: 2 },
+        rarity: 'uncommon', effect: { kind: 'dmgPlayer', n: 3 }, target: null,
+        text: 'Deal 3 damage to the enemy player.' });
+  def({ id: 'butcher_of_hopes', name: 'Butcher of Hopes', type: 'unit', cost: { D: 4, G: 2 }, atk: 7, def: 5,
+        rarity: 'rare', text: '' });
+  def({ id: 'vhorgoth', name: 'Vhorgoth, Hunger Eternal', type: 'unit', cost: { D: 5, G: 4 }, atk: 9, def: 7,
+        rarity: 'titan', text: '' });
+
+  /* ---- Void ---- */
+  def({ id: 'rift_stalker', name: 'Rift Stalker', type: 'unit', cost: { G: 5 }, atk: 5, def: 5,
+        rarity: 'uncommon', text: 'Void. May be included in any deck, in any number.' });
+  def({ id: 'unmake', name: 'Unmake', type: 'spell', cost: { G: 7 },
+        rarity: 'rare', effect: { kind: 'destroy' }, target: 'anyUnit',
+        text: 'Void. Destroy target unit.' });
+
+  /* ---- Dual-faction rares (for the two-color Leaders) ---- */
+  def({ id: 'hatefire', name: 'Hatefire', type: 'spell', cost: { F: 1, D: 1 },
+        rarity: 'rare', effect: { kind: 'dmgUnit', n: 4 }, target: 'anyUnit', text: 'Deal 4 damage to target unit.' });
+  def({ id: 'wildheart_ravager', name: 'Wildheart Ravager', type: 'unit', cost: { F: 1, N: 1, G: 1 }, atk: 5, def: 4,
+        rarity: 'rare', keywords: ['hasty'], text: 'Hasty.' });
+  def({ id: 'mirrorlight_sentinel', name: 'Mirrorlight Sentinel', type: 'unit', cost: { W: 1, L: 1, G: 1 }, atk: 4, def: 5,
+        rarity: 'rare', text: '' });
+  def({ id: 'drowned_whisperer', name: 'Drowned Whisperer', type: 'unit', cost: { W: 1, D: 1, G: 1 }, atk: 4, def: 4,
+        rarity: 'rare', move: 2, keywords: ['swift'], text: 'Swift.' });
+  def({ id: 'citadel_colossus', name: 'Citadel Colossus', type: 'unit', cost: { E: 1, L: 1, G: 2 }, atk: 5, def: 8,
+        rarity: 'rare', keywords: ['guard'], text: 'Guard.' });
+  def({ id: 'verdant_rampart', name: 'Verdant Rampart', type: 'unit', cost: { E: 1, N: 1, G: 1 }, atk: 3, def: 7,
+        rarity: 'rare', keywords: ['guard'], text: 'Guard.' });
+
+  /* ---- Expansion Leaders ---- */
+  def({ id: 'leader_ashka', name: 'Ashka, Pyre of the Fallen', type: 'leader', cost: { F: 1, D: 1, G: 1 },
+        atk: 4, def: 3, keywords: ['hasty'], unique: true, rarity: 'leader', text: 'Hasty.' });
+  def({ id: 'leader_grovnar', name: 'Grovnar, Wildfire Shaman', type: 'leader', cost: { F: 1, N: 1, G: 1 },
+        atk: 4, def: 4, unique: true, rarity: 'leader', text: '' });
+  def({ id: 'leader_serelia', name: 'Serelia, Mirror Magistrate', type: 'leader', cost: { W: 1, L: 1, G: 1 },
+        atk: 3, def: 4, unique: true, rarity: 'leader', text: '' });
+  def({ id: 'leader_nix', name: 'Nix, Whisper of the Depths', type: 'leader', cost: { W: 1, D: 1, G: 1 },
+        atk: 3, def: 3, move: 2, keywords: ['swift'], unique: true, rarity: 'leader', text: 'Swift.' });
+  def({ id: 'leader_ossic', name: 'Tribune Ossic, the Adamant', type: 'leader', cost: { E: 1, L: 1, G: 1 },
+        atk: 2, def: 6, keywords: ['guard'], unique: true, rarity: 'leader', text: 'Guard.' });
+  def({ id: 'leader_thaelen', name: 'Thaelen, Root-Warden', type: 'leader', cost: { E: 1, N: 1, G: 2 },
+        atk: 4, def: 6, unique: true, rarity: 'leader', text: '' });
+  def({ id: 'leader_cindra', name: 'Cindra, Ember Queen', type: 'leader', cost: { F: 1, G: 1 },
+        atk: 3, def: 2, keywords: ['hasty'], unique: true, rarity: 'leader', text: 'Hasty.' });
+  def({ id: 'leader_mirren', name: 'Tidelord Mirren', type: 'leader', cost: { W: 2, G: 2 },
+        atk: 4, def: 5, unique: true, rarity: 'leader', text: '' });
+  def({ id: 'leader_bramm', name: 'Oakfather Bramm', type: 'leader', cost: { N: 2, G: 3 },
+        atk: 6, def: 6, unique: true, rarity: 'leader', text: '' });
+  def({ id: 'leader_hollow', name: 'The Hollow Crown', type: 'leader', cost: { G: 3 },
+        atk: 3, def: 3, unique: true, rarity: 'leader',
+        text: 'Void. Its identity holds no energy type: only Void and generic-cost cards.' });
+
   /* ---------- Derived info ---------- */
 
   /* Typed energy symbols in a card's cost — its faction identity. */
@@ -277,28 +415,78 @@
     .filter(c => c.type !== 'energy' && c.type !== 'leader')
     .map(c => c.id);
 
-  /* ---------- Prebuilt mono decks, generated from the pool ----------
-   * 20 energy (19 faction + 1 Void Rift) + commons x3, uncommons x2,
-   * rares x1, titan x1 → 54 cards, within the 40–60 rule. */
-  const RARITY_COPIES = { common: 3, uncommon: 2, rare: 1, titan: 1 };
+  /* ---------- Prebuilt decks, generated from the pool ----------
+   * Selection is deterministic: within each rarity, cheapest first. */
 
-  function genDeckList(sym, energyId) {
+  function costTotal(c) { return Object.values(c.cost).reduce((a, b) => a + b, 0); }
+
+  function poolFor(pred) {
+    return Object.values(C)
+      .filter(c => c.type !== 'energy' && c.type !== 'leader' && pred(c))
+      .sort((a, b) => (costTotal(a) - costTotal(b)) || a.id.localeCompare(b.id));
+  }
+  function take(pool, rarity, n, copies, list) {
+    for (const c of pool.filter(c => c.rarity === rarity).slice(0, n)) list.push([c.id, copies]);
+  }
+
+  /* Mono deck: 20 energy + commons 7×3, uncommons 5×2, rares 2×1, titan 1. (54) */
+  function genMono(sym, energyId) {
+    const pool = poolFor(c => { const s = costSymbols(c); return s.length === 1 && s[0] === sym; });
     const list = [[energyId, 19], ['energy_void', 1]];
-    for (const c of Object.values(C)) {
-      if (c.type === 'energy' || c.type === 'leader') continue;
-      const syms = costSymbols(c);
-      if (syms.length === 1 && syms[0] === sym) list.push([c.id, RARITY_COPIES[c.rarity]]);
-    }
+    take(pool, 'common', 7, 3, list);
+    take(pool, 'uncommon', 5, 2, list);
+    take(pool, 'rare', 2, 1, list);
+    take(pool, 'titan', 1, 1, list);
     return list;
   }
 
+  /* Dual deck: 20 energy + per faction commons 5×2, uncommons 3×1, rare 1×1,
+   * plus every dual card of the pair ×1 and the pair's cheapest titan. (~50) */
+  function genDual(symA, symB, energyA, energyB) {
+    const list = [[energyA, 10], [energyB, 9], ['energy_void', 1]];
+    for (const sym of [symA, symB]) {
+      const pool = poolFor(c => { const s = costSymbols(c); return s.length === 1 && s[0] === sym; });
+      take(pool, 'common', 5, 2, list);
+      take(pool, 'uncommon', 3, 1, list);
+      take(pool, 'rare', 1, 1, list);
+    }
+    const duals = poolFor(c => {
+      const s = costSymbols(c);
+      return s.length === 2 && s.every(x => x === symA || x === symB);
+    });
+    for (const c of duals) list.push([c.id, 1]);
+    const titans = poolFor(c => {
+      const s = costSymbols(c);
+      return c.rarity === 'titan' && s.length === 1 && (s[0] === symA || s[0] === symB);
+    });
+    if (titans.length > 0) list.push([titans[0].id, 1]);
+    return list;
+  }
+
+  /* Void deck: colorless identity — Void cards in any number. */
+  function genVoid() {
+    return [['energy_void', 20],
+      ['void_crawler', 6], ['void_pulse', 4], ['void_spawn', 4], ['rift_stalker', 3],
+      ['rift_horror', 2], ['null_titan', 2], ['unmake', 2], ['entropy_titan', 1]];
+  }
+
   const DECKS = {
-    fire:   { name: 'Fire — Ashborn Uprising',  leader: 'leader_fire',   cards: genDeckList('F', 'energy_fire') },
-    water:  { name: 'Water — Tidebound Court',  leader: 'leader_water',  cards: genDeckList('W', 'energy_water') },
-    nature: { name: 'Nature — Rootking Horde',  leader: 'leader_nature', cards: genDeckList('N', 'energy_nature') },
-    earth:  { name: 'Earth — Unbroken Bulwark', leader: 'leader_earth',  cards: genDeckList('E', 'energy_earth') },
-    light:  { name: 'Light — Rank and File',    leader: 'leader_light',  cards: genDeckList('L', 'energy_light') },
-    dark:   { name: 'Dark — The Casteless',     leader: 'leader_dark',   cards: genDeckList('D', 'energy_dark') },
+    fire:    { name: 'Fire — Ashborn Uprising',        leader: 'leader_fire',    cards: genMono('F', 'energy_fire') },
+    water:   { name: 'Water — Tidebound Court',        leader: 'leader_water',   cards: genMono('W', 'energy_water') },
+    nature:  { name: 'Nature — Rootking Horde',        leader: 'leader_nature',  cards: genMono('N', 'energy_nature') },
+    earth:   { name: 'Earth — Unbroken Bulwark',       leader: 'leader_earth',   cards: genMono('E', 'energy_earth') },
+    light:   { name: 'Light — Rank and File',          leader: 'leader_light',   cards: genMono('L', 'energy_light') },
+    dark:    { name: 'Dark — The Casteless',           leader: 'leader_dark',    cards: genMono('D', 'energy_dark') },
+    cindra:  { name: 'Fire — Cindra’s Vanguard',  leader: 'leader_cindra',  cards: genMono('F', 'energy_fire') },
+    mirren:  { name: 'Water — Mirren’s Armada',   leader: 'leader_mirren',  cards: genMono('W', 'energy_water') },
+    bramm:   { name: 'Nature — Bramm’s Grove',    leader: 'leader_bramm',   cards: genMono('N', 'energy_nature') },
+    ashka:   { name: 'Fire/Dark — Pyre of the Fallen', leader: 'leader_ashka',   cards: genDual('F', 'D', 'energy_fire', 'energy_dark') },
+    grovnar: { name: 'Fire/Nature — Wildfire Rite',    leader: 'leader_grovnar', cards: genDual('F', 'N', 'energy_fire', 'energy_nature') },
+    serelia: { name: 'Water/Light — Mirror Court',     leader: 'leader_serelia', cards: genDual('W', 'L', 'energy_water', 'energy_light') },
+    nix:     { name: 'Water/Dark — Drowned Whispers',  leader: 'leader_nix',     cards: genDual('W', 'D', 'energy_water', 'energy_dark') },
+    ossic:   { name: 'Earth/Light — Adamant Tribunal', leader: 'leader_ossic',   cards: genDual('E', 'L', 'energy_earth', 'energy_light') },
+    thaelen: { name: 'Earth/Nature — Rooted Bulwark',  leader: 'leader_thaelen', cards: genDual('E', 'N', 'energy_earth', 'energy_nature') },
+    hollow:  { name: 'Void — The Hollow Crown',        leader: 'leader_hollow',  cards: genVoid() },
   };
 
   /* ---------- Booster packs ----------

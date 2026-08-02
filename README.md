@@ -6,24 +6,59 @@ Implements the comprehensive rules draft **v0.1** (see [RULES.md](RULES.md)).
 
 ## Play it
 
-No build step, no dependencies. Either:
-
-- open `index.html` directly in a browser, or
-- serve the folder: `python3 -m http.server` then visit `http://localhost:8000`.
-
-Two modes:
+Three modes:
 
 - **Hotseat** — two players sharing one screen (a pass-device overlay separates turns).
 - **Solo** — you play Player Two against a simple AI running Player One.
+- **Online** — play a friend over the internet with a 4-letter room code (requires the
+  server, below).
 
-Six prebuilt 54-card mono-faction decks are included (Fire, Water, Nature, Earth, Light,
-Dark), each with its own Leader, plus a Void Rift energy in every deck. The decks are
-generated from the full card pool: commons ×3, uncommons ×2, rares ×1, and one titan each.
+For hotseat and solo, no server is needed: open `index.html` directly, or serve the folder
+statically (`python3 -m http.server`).
+
+For online play, run the Node server (it also serves the client):
+
+```
+npm install
+npm start        # http://localhost:3000
+```
+
+One player picks a deck and clicks **Create room**, the other enters the room code and
+clicks **Join room**. The host is Player One and goes first.
+
+### Deploy to Railway
+
+The repo is ready for [Railway](https://railway.app):
+
+1. Push this repo to GitHub and create a new Railway project from it (or run `railway up`
+   with the Railway CLI from this folder).
+2. That's it — `railway.json` and `package.json` tell Railway to build with Nixpacks and
+   run `npm start`; the server binds to Railway's `PORT` automatically and WebSockets work
+   over the generated `https://…up.railway.app` domain out of the box.
+3. Share the URL; both players open it and use a room code to play.
+
+The server (`server.js`) is a small room-code relay: the game runs in the two clients as
+replicated state with one writer at a time, and the server just matches players and
+forwards state. There is no persistence and no account system — a room lives as long as
+both sockets do.
+
+## Decks
+
+Sixteen prebuilt decks are generated from the card pool, one per Leader:
+
+- **Six mono-faction decks** (54 cards: commons ×3, uncommons ×2, rares ×1, one titan) for
+  Karvex, Maris, Vharn, Dornath, Seraphel, and Morvane — plus **three alternate mono
+  Leaders** (Cindra of Fire, Tidelord Mirren of Water, Oakfather Bramm of Nature) running
+  the same pools with different Leader stats and costs.
+- **Six dual-faction decks** (50 cards drawing on both factions plus a signature dual-cost
+  rare): Fire/Dark, Fire/Nature, Water/Light, Water/Dark, Earth/Light, and Earth/Nature.
+- **The Hollow Crown** — a Void Leader whose identity holds no energy type: an all-Void
+  44-card deck powered entirely by Void Rifts, leaning on the "any number of copies" rule.
 
 ## Rarities, packs, and your collection
 
-The pool holds **96 collectible cards** across four rarities — **common**, **uncommon**,
-**rare**, and **titan** (one colossal signature card per faction, plus Entropy for Void).
+The pool holds **146 collectible cards** across four rarities — **common**, **uncommon**,
+**rare**, and **titan** (two colossal signature cards per faction, plus Entropy for Void).
 Rarity is shown as a colored edge and tag on every card.
 
 The main menu has a **booster pack** opener: each pack holds 8 cards — 5 commons,
@@ -59,11 +94,13 @@ Win by reducing the enemy from 25 life to 0 — or by decking them out.
 | Path | Purpose |
 | --- | --- |
 | `index.html`, `styles.css` | Page shell and theme |
-| `js/cards.js` | Card database and prebuilt deck lists |
+| `server.js`, `railway.json` | Multiplayer room server (Node + ws) and Railway config |
+| `js/cards.js` | Card database and generated deck lists |
 | `js/engine.js` | Pure rules engine (no DOM) — zones, energy, the Order, movement, combat |
 | `js/ai.js` | Heuristic AI opponent |
-| `js/ui.js` | Interactive layer: board, hand, fight-phase flow, Order modal |
-| `test/sim.js` | Headless smoke test: `node test/sim.js` runs AI-vs-AI across all 36 faction pairings |
+| `js/net.js` | WebSocket client for online play |
+| `js/ui.js` | Interactive layer: board, hand, fight-phase flow, Order modal, packs |
+| `test/sim.js` | Headless smoke test: `npm test` runs AI-vs-AI across all 256 deck pairings |
 | `RULES.md` | Comprehensive rules draft v0.1 with locked rulings |
 
 ## Known v0.1 simplifications
@@ -74,3 +111,7 @@ Win by reducing the enemy from 25 life to 0 — or by decking them out.
   response window.
 - No mulligan rule yet (the draft leaves it open).
 - Hotseat trusts players not to peek at the inactive hand.
+- Online play replicates the full game state to both clients, so a determined opponent
+  could read your hand from the browser console — fine among friends, not tournament-grade.
+- Online combat assignment is sequential: the attacker assigns (or hands over), then the
+  defender assigns and resolves. Disconnects end the game; there is no reconnect yet.

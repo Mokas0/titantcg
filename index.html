@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Titanrule — Simulator</title>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -17,6 +18,18 @@
       <h3>Mode</h3>
       <button class="mode-btn" data-mode="hotseat">Hotseat — two players, one screen</button>
       <button class="mode-btn" data-mode="ai">Solo — you (Player Two) vs AI (Player One)</button>
+      <button class="mode-btn" data-mode="online">Online — play a friend over the internet</button>
+    </div>
+  </div>
+  <div class="setup-row" id="online-panel" style="display:none">
+    <div class="setup-col">
+      <h3>Online play</h3>
+      <div id="online-status" class="packinfo">Pick your deck below, then create a room or join one.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button id="createroom" class="primary">Create room</button>
+        <input id="joincode" maxlength="4" placeholder="CODE" style="width:80px;text-transform:uppercase;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-size:14px">
+        <button id="joinroom">Join room</button>
+      </div>
     </div>
   </div>
   <div class="setup-row">
@@ -109,6 +122,7 @@
   </div>
 </div>
 
+<script src="js/net.js"></script>
 <script src="js/cards.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/ai.js"></script>

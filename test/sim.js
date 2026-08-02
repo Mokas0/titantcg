@@ -15,7 +15,7 @@ const factions = Object.keys(globalThis.TCG_DECKS);
 /* ---------- Static validation of the card pool, decks and packs ---------- */
 const KNOWN_KINDS = new Set(['dmgUnit', 'dmgPlayer', 'dmgRow', 'heal', 'draw', 'destroy',
   'bounce', 'push', 'buff', 'counter', 'rampEnergy', 'sacDraw', 'tokens', 'augment',
-  'location', 'drain', 'painDraw']);
+  'location', 'drain', 'painDraw', 'gainLife']);
 const KNOWN_TARGETS = new Set(['anyUnit', 'ownUnit', 'enemyUnit', 'order', 'row']);
 const KNOWN_RARITIES = new Set(['common', 'uncommon', 'rare', 'titan', 'leader']);
 let bad = 0;

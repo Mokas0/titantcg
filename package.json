@@ -1,0 +1,16 @@
+{
+  "name": "titanrule",
+  "version": "0.1.0",
+  "description": "Titanrule TCG simulator — hotseat, vs AI, and online multiplayer",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/sim.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

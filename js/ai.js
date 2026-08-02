@@ -81,6 +81,9 @@
         if (c.type === 'action') {
           if (k === 'draw' || k === 'rampEnergy') res = E.playCard(g, p, i, {});
           else if (k === 'tokens') res = E.playCard(g, p, i, {});
+          else if (k === 'gainLife') {
+            if (g.players[p].life <= 20) res = E.playCard(g, p, i, {});
+          }
           else if (k === 'dmgRow') {
             let best = null, bestCount = 0;
             for (let r = 0; r < 5; r++) {

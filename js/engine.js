@@ -26,8 +26,6 @@
   const OPENING_HAND = 7;
   const LEADER_RECAST_STEP = 2;
 
-  let uidCounter = 1;
-
   function shuffle(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -52,6 +50,7 @@
     const g = {
       players: [],
       units: [],
+      nextUid: 1,    // lives on the state so networked clients never collide
       activePlayer: 0,
       phase: 'main1',
       fightStep: null,      // 'move' | 'assign' | 'direct' | null
@@ -184,7 +183,7 @@
 
   function makeUnit(g, p, c, row, flags = {}) {
     const u = {
-      uid: uidCounter++,
+      uid: g.nextUid++,
       cardId: flags.isToken ? null : c.id,
       name: c.name,
       owner: p,
@@ -426,6 +425,10 @@
           log(g, `${c.name} drains ${e.n} from ${t.name} — ${playerName(p)} rises to ${g.players[p].life} life.`);
           checkDeaths(g, c.name);
         }
+        break;
+      case 'gainLife':
+        g.players[p].life += e.n;
+        log(g, `${playerName(p)} gains ${e.n} life (${g.players[p].life}).`);
         break;
       case 'painDraw':
         drawCards(g, p, e.n);

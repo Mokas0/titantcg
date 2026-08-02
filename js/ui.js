@@ -71,15 +71,34 @@
 
   /* ---------- helpers ---------- */
 
-  function humanPlayers() { return settings.mode === 'ai' ? [1] : [0, 1]; }
+  function online() { return settings.mode === 'online'; }
+  function mySeat() { return globalThis.Net.seat; }
+  /* Broadcast the game state after a local mutation (online mode only). */
+  function sync() { if (online() && globalThis.Net.connected) globalThis.Net.sendState(G); }
+
+  function humanPlayers() {
+    if (online()) return [mySeat()];
+    return settings.mode === 'ai' ? [1] : [0, 1];
+  }
   function isHuman(p) { return humanPlayers().includes(p); }
   /* Whose hand is on screen. */
   function viewPlayer() {
+    if (online()) return mySeat();
     if (ui.respContext) return ui.respContext.player;
     if (settings.mode === 'ai') return 1;
     return G.activePlayer;
   }
-  function myTurn() { return G.activePlayer === viewPlayer() && !ui.aiBusy && !ui.aiWaitingDefense; }
+  /* Who currently drives the assign-damage step (online handoff). */
+  function assignActor() {
+    return G.mpStage === 'defender' ? E.other(G.activePlayer) : G.activePlayer;
+  }
+  function myTurn() {
+    if (online()) {
+      return G.activePlayer === mySeat() && G.order.length === 0 &&
+        !(G.phase === 'fight' && G.fightStep === 'assign' && G.mpStage === 'defender');
+    }
+    return G.activePlayer === viewPlayer() && !ui.aiBusy && !ui.aiWaitingDefense;
+  }
   function inMain() { return G.phase === 'main1' || G.phase === 'main2'; }
 
   function costHtml(cost) {
@@ -194,8 +213,17 @@
     renderPacks();
     document.querySelectorAll('.mode-btn').forEach(b => {
       b.classList.toggle('selected', b.dataset.mode === settings.mode);
-      b.onclick = () => { settings.mode = b.dataset.mode; buildSetup(); };
+      if (b.dataset.mode === 'online' && !globalThis.Net.available) {
+        b.disabled = true;
+        b.textContent = 'Online — requires the server (npm start, or a Railway deploy)';
+      } else {
+        b.onclick = () => { settings.mode = b.dataset.mode; buildSetup(); };
+      }
     });
+    $('online-panel').style.display = online() ? 'flex' : 'none';
+    $('deck-col-1').style.display = online() ? 'none' : 'block';
+    $('deck-col-0').querySelector('h3').textContent = online() ? 'Your deck' : "Player One's deck";
+    $('startbtn').style.display = online() ? 'none' : 'inline-block';
     for (const p of [0, 1]) {
       const col = $(`deck-col-${p}`);
       col.querySelectorAll('.deck-btn').forEach(b => b.remove());
@@ -209,6 +237,91 @@
     }
     $('startbtn').onclick = startGame;
   }
+
+  /* ---------- Online lobby ---------- */
+
+  function onlineStatus(msg) { $('online-status').textContent = msg; }
+
+  function registerNetHandlers() {
+    const Net = globalThis.Net;
+    Net.on('created', msg => {
+      onlineStatus(`Room ${msg.code} created — you are Player One. Waiting for your opponent…`);
+    });
+    Net.on('opponent_joined', msg => {
+      // Host builds the game and broadcasts it.
+      startOnlineGame(settings.factions[0], msg.guestFaction);
+    });
+    Net.on('joined', () => {
+      onlineStatus('Joined — you are Player Two. Waiting for the host to start…');
+    });
+    Net.on('error', msg => { onlineStatus(msg.err); });
+    Net.on('state', msg => onRemoteState(msg.g));
+    Net.on('bye', () => {
+      if (G && G.winner !== null) return; // game finished normally
+      alert('Your opponent disconnected.');
+      backToSetup();
+    });
+  }
+
+  async function goOnline(action) {
+    const Net = globalThis.Net;
+    try {
+      await Net.connect();
+    } catch (e) {
+      onlineStatus(e.message + ' Online play needs the Node server (npm start, or Railway).');
+      return;
+    }
+    registerNetHandlers();
+    if (action === 'create') {
+      Net.create(settings.factions[0]);
+    } else {
+      const code = $('joincode').value.trim().toUpperCase();
+      if (code.length !== 4) { onlineStatus('Enter the 4-letter room code.'); return; }
+      Net.join(code, settings.factions[0]);
+    }
+  }
+
+  function startOnlineGame(hostFaction, guestFaction) {
+    G = E.newGame(hostFaction, guestFaction, {});
+    resetUiState();
+    ui.packsAwarded = false;
+    enterGameScreen();
+    renderAll();
+    sync();
+  }
+
+  function onRemoteState(g) {
+    G = g;
+    const firstState = $('game').style.display !== 'block';
+    if (firstState) ui.packsAwarded = false;
+    resetUiState();
+    enterGameScreen();
+    $('ordermodal').style.display = 'none';
+    renderAll();
+    // If a spell is waiting on the Order and I'm the responder, open the modal.
+    if (G.winner === null && G.order.length > 0) {
+      const last = G.order[G.order.length - 1];
+      if (E.other(last.controller) === mySeat()) showOrderModal(mySeat());
+    }
+  }
+
+  function resetUiState() {
+    Object.assign(ui, { mode: 'idle', handIdx: null, targetCard: null, moveUid: null,
+      respContext: null, directSel: new Set(), directInit: false,
+      aiWaitingDefense: false, aiBusy: false });
+    clearBanner();
+  }
+
+  function enterGameScreen() {
+    if ($('game').style.display !== 'block') {
+      $('setup').style.display = 'none';
+      $('game').style.display = 'block';
+      $('handwrap').style.display = 'block';
+    }
+  }
+
+  $('createroom').onclick = () => goOnline('create');
+  $('joinroom').onclick = () => goOnline('join');
 
   function startGame() {
     G = E.newGame(settings.factions[0], settings.factions[1],
@@ -225,6 +338,7 @@
   }
 
   function backToSetup() {
+    globalThis.Net.close();
     G = null;
     $('game').style.display = 'none';
     $('handwrap').style.display = 'none';
@@ -257,8 +371,9 @@
   }
 
   function renderPhasebar() {
+    const seat = online() ? ` · you are ${E.playerName(mySeat())}` : '';
     $('phasebar').innerHTML =
-      `Turn ${G.turnCount} — <b>${E.playerName(G.activePlayer)}</b> — ${phaseName()}`;
+      `Turn ${G.turnCount} — <b>${E.playerName(G.activePlayer)}</b> — ${phaseName()}${seat}`;
   }
 
   function renderStats(p) {
@@ -401,17 +516,17 @@
       const res = E.playCard(G, p, ui.handIdx, { row: r });
       if (!res.ok) { banner(res.err); return; }
       ui.mode = 'idle'; ui.handIdx = null; clearBanner();
-      renderAll();
+      renderAll(); sync();
     } else if (ui.mode === 'deployLeader') {
       const res = E.castLeader(G, p, r);
       if (!res.ok) { banner(res.err); return; }
       ui.mode = 'idle'; clearBanner();
-      renderAll();
+      renderAll(); sync();
     } else if (ui.moveUid) {
       const res = E.moveUnit(G, ui.moveUid, r);
       if (!res.ok) { banner(res.err); return; }
       ui.moveUid = null;
-      renderAll();
+      renderAll(); sync();
     }
   }
 
@@ -453,7 +568,7 @@
     if (c.type === 'energy') {
       const res = E.playEnergy(G, p, i);
       if (!res.ok) banner(res.err);
-      renderAll();
+      renderAll(); sync();
       return;
     }
     if (c.type === 'unit') {
@@ -465,7 +580,7 @@
     if (c.type === 'location') {
       const res = E.playCard(G, p, i, {});
       if (!res.ok) banner(res.err);
-      renderAll();
+      renderAll(); sync();
       return;
     }
     if (c.type === 'augment' || (c.type === 'action' && c.target)) {
@@ -477,7 +592,7 @@
     if (c.type === 'action') {
       const res = E.playCard(G, p, i, {});
       if (!res.ok) banner(res.err);
-      renderAll();
+      renderAll(); sync();
       return;
     }
     if (c.type === 'spell') {
@@ -509,7 +624,7 @@
     if (c.type === 'augment') res = E.playCard(G, p, i, { targetUid: uid });
     else res = E.playCard(G, p, i, { targets: { uid } });
     if (!res.ok) banner(res.err);
-    renderAll();
+    renderAll(); sync();
   }
 
   function completeRowTarget(row) {
@@ -530,7 +645,7 @@
     if (c.type === 'spell') { castAndRunOrder(p, i, { row }); return; }
     const res = E.playCard(G, p, i, { targets: { row } });
     if (!res.ok) banner(res.err);
-    renderAll();
+    renderAll(); sync();
   }
 
   /* ---------- The Order ---------- */
@@ -546,6 +661,16 @@
     if (G.order.length === 0) { renderAll(); return; }
     const last = G.order[G.order.length - 1];
     const responder = E.other(last.controller);
+    if (online()) {
+      const canRespond =
+        G.players[responder].hand.some(id => E.spellPlayable(G, responder, CARDS[id]));
+      if (!canRespond) { finishOrder(); return; }
+      if (responder === mySeat()) { showOrderModal(responder); return; }
+      // Remote player must respond: sync and wait for their state.
+      renderAll(); sync();
+      banner('Waiting for your opponent to respond on the Order…', true);
+      return;
+    }
     const canRespond = isHuman(responder) &&
       G.players[responder].hand.some(id => E.spellPlayable(G, responder, CARDS[id]));
     if (!canRespond) { finishOrder(); return; }
@@ -555,7 +680,7 @@
   function finishOrder() {
     $('ordermodal').style.display = 'none';
     E.resolveOrder(G);
-    renderAll();
+    renderAll(); sync();
   }
 
   function showOrderModal(responder) {
@@ -633,6 +758,39 @@
     const c = $('controls');
     c.replaceChildren();
     if (G.winner !== null) return;
+    if (online()) {
+      if (G.order.length > 0) {
+        const last = G.order[G.order.length - 1];
+        c.appendChild(el('span', '', E.other(last.controller) === mySeat()
+          ? 'Respond on the Order…' : 'Waiting for opponent…'));
+        return;
+      }
+      if (G.phase === 'fight' && G.fightStep === 'assign') {
+        const me = mySeat();
+        if (assignActor() === me) {
+          c.appendChild(ctrlButton('Auto-assign my damage', () => { E.autoAssignFor(G, me); renderAll(); }));
+          const defender = E.other(G.activePlayer);
+          const defenderHasAttackers = E.contestedRows(G)
+            .some(r => E.sideInRow(G, r, defender).some(u => E.effAtk(G, u) > 0));
+          if (G.mpStage !== 'defender' && me === G.activePlayer && defenderHasAttackers) {
+            c.appendChild(ctrlButton('Hand over to defender', () => {
+              G.mpStage = 'defender';
+              renderAll(); sync();
+              banner('Waiting for the defender to assign their damage…', true);
+            }, true));
+          } else {
+            c.appendChild(ctrlButton('Resolve Combat', onResolveCombat, true));
+          }
+        } else {
+          c.appendChild(el('span', '', 'Waiting for opponent to assign combat damage…'));
+        }
+        return;
+      }
+      if (G.activePlayer !== mySeat()) {
+        c.appendChild(el('span', '', "Opponent's turn…"));
+        return;
+      }
+    }
     if (ui.aiBusy && !ui.aiWaitingDefense) {
       c.appendChild(el('span', '', 'AI is taking its turn…'));
       return;
@@ -644,13 +802,14 @@
     }
     if (!myTurn()) return;
     if (G.phase === 'main1') {
-      c.appendChild(ctrlButton('To Fight Phase ⚔', () => { E.beginFight(G); renderAll(); }, true));
+      c.appendChild(ctrlButton('To Fight Phase ⚔', () => { E.beginFight(G); renderAll(); sync(); }, true));
     } else if (G.phase === 'fight' && G.fightStep === 'move') {
       c.appendChild(ctrlButton('Done Moving', () => {
         ui.moveUid = null;
         E.finishMoves(G);
+        if (online() && G.fightStep === 'assign') G.mpStage = 'attacker';
         ui.directInit = false;
-        renderAll();
+        renderAll(); sync();
       }, true));
     } else if (G.phase === 'fight' && G.fightStep === 'assign') {
       for (const p of humanPlayers()) {
@@ -672,12 +831,12 @@
       c.appendChild(ctrlButton(`Attack Player (${total} damage)`, () => {
         E.doDirectAttacks(G, [...ui.directSel]);
         ui.directInit = false;
-        renderAll();
+        renderAll(); sync();
       }, true));
       c.appendChild(ctrlButton('Skip', () => {
         E.doDirectAttacks(G, []);
         ui.directInit = false;
-        renderAll();
+        renderAll(); sync();
       }));
     } else if (G.phase === 'main2') {
       c.appendChild(ctrlButton('End Turn ⏭', onEndTurn, true));
@@ -687,8 +846,10 @@
   function onResolveCombat() {
     const res = E.resolveCombat(G);
     if (!res.ok) { banner(res.err); return; }
+    delete G.mpStage;
     ui.directInit = false;
-    renderAll();
+    clearBanner();
+    renderAll(); sync();
     if (ui.aiWaitingDefense) {
       ui.aiWaitingDefense = false;
       continueAITurn();
@@ -697,10 +858,11 @@
 
   function onEndTurn() {
     E.endTurn(G);
+    delete G.mpStage;
     ui.directInit = false;
-    renderAll();
+    renderAll(); sync();
     if (G.winner !== null) return;
-    if (G.players[G.activePlayer].isAI) runAITurn();
+    if (!online() && G.players[G.activePlayer].isAI) runAITurn();
     else if (settings.mode === 'hotseat') showPassOverlay();
   }
 
@@ -708,7 +870,8 @@
 
   function renderAssignPanel() {
     const panel = $('assignpanel');
-    const inAssign = G.phase === 'fight' && G.fightStep === 'assign' && (myTurn() || ui.aiWaitingDefense);
+    const inAssign = G.phase === 'fight' && G.fightStep === 'assign' &&
+      (online() ? assignActor() === mySeat() : (myTurn() || ui.aiWaitingDefense));
     if (!inAssign) { panel.style.display = 'none'; panel.replaceChildren(); return; }
     panel.style.display = 'block';
     panel.replaceChildren();
@@ -727,7 +890,8 @@
           line.appendChild(el('span', 'who',
             `${esc(u.name)} (${E.playerName(p)}) — ⚔${E.effAtk(G, u)}, assigned ${assigned}`));
           if (!editable.includes(p)) {
-            line.appendChild(el('span', 'stat', 'AI assigns automatically'));
+            line.appendChild(el('span', 'stat',
+              online() ? 'Assigned by your opponent' : 'AI assigns automatically'));
           } else {
             for (const f of foes) {
               const t = el('span', 'assign-target');
