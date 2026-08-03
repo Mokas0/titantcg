@@ -199,6 +199,226 @@
     }
   }
 
+  /* ---------- Custom decks & the deck builder ---------- */
+
+  const DECKSTORE_KEY = 'titanrule.decks.v1';
+  function loadCustomDecks() {
+    try {
+      const d = JSON.parse(localStorage.getItem(DECKSTORE_KEY));
+      if (Array.isArray(d)) return d;
+    } catch (e) { /* first run */ }
+    return [];
+  }
+  const customDecks = loadCustomDecks();
+  function saveCustomDecks() {
+    try { localStorage.setItem(DECKSTORE_KEY, JSON.stringify(customDecks)); } catch (e) { /* ok */ }
+  }
+
+  /* Resolve a deck-selection key ('fire' or 'custom:<id>') to a spec the
+   * engine accepts: {name, leader, cards: [[id, n], ...]}. */
+  function resolveDeckKey(key) {
+    if (String(key).startsWith('custom:')) {
+      const d = customDecks.find(x => 'custom:' + x.id === key);
+      if (d) return { name: d.name, leader: d.leader, cards: Object.entries(d.cards) };
+    }
+    return DECKS[key] || DECKS.fire;
+  }
+  function deckKeyExists(key) {
+    return String(key).startsWith('custom:')
+      ? customDecks.some(x => 'custom:' + x.id === key)
+      : key in DECKS;
+  }
+
+  const builder = { editingId: null, name: '', leader: 'leader_fire', cards: {} };
+  const SYM_ENERGY = { F: 'energy_fire', W: 'energy_water', N: 'energy_nature',
+                       E: 'energy_earth', L: 'energy_light', D: 'energy_dark' };
+  const ENERGY_IDS = [...Object.values(SYM_ENERGY), 'energy_void'];
+
+  function showBuilder() {
+    $('setup').style.display = 'none';
+    $('builder').style.display = 'block';
+    loadBuilderDeck(customDecks.length > 0 ? customDecks[0].id : null);
+  }
+  function hideBuilder() {
+    $('builder').style.display = 'none';
+    $('setup').style.display = 'block';
+    buildSetup();
+  }
+
+  function loadBuilderDeck(id) {
+    const d = customDecks.find(x => x.id === id);
+    if (d) {
+      builder.editingId = d.id;
+      builder.name = d.name;
+      builder.leader = d.leader;
+      builder.cards = { ...d.cards };
+    } else {
+      builder.editingId = null;
+      builder.name = 'New deck';
+      builder.leader = 'leader_fire';
+      builder.cards = {};
+    }
+    $('b-savemsg').textContent = '';
+    renderBuilder();
+  }
+
+  /* How many copies of a card the builder may still add. */
+  function builderMax(c) {
+    if (c.type === 'energy') return c.id === 'energy_void' ? 3 : Infinity;
+    const syms = costSymbols(c);
+    const ownedCap = collection.cards[c.id] || 0;
+    if (syms.length === 0) return ownedCap;                       // Void: any number, but only what you own
+    return Math.min(c.unique ? 1 : 3, ownedCap);
+  }
+  function legalForLeader(c) {
+    const identity = costSymbols(CARDS[builder.leader]);
+    return costSymbols(c).every(s => identity.includes(s));
+  }
+
+  function addToDeck(id) {
+    const c = CARDS[id];
+    const n = builder.cards[id] || 0;
+    if (n >= builderMax(c)) return;
+    builder.cards[id] = n + 1;
+    renderBuilder();
+  }
+  function removeFromDeck(id) {
+    if (!builder.cards[id]) return;
+    builder.cards[id]--;
+    if (builder.cards[id] === 0) delete builder.cards[id];
+    renderBuilder();
+  }
+
+  function autoFillEnergy() {
+    const identity = costSymbols(CARDS[builder.leader]);
+    const pool = identity.length > 0
+      ? identity.map(s => SYM_ENERGY[s])
+      : Object.values(SYM_ENERGY);        // Void identity: any basic works
+    let total = Object.values(builder.cards).reduce((a, b) => a + b, 0);
+    let i = 0;
+    while (total < 40) {
+      const id = pool[i % pool.length];
+      builder.cards[id] = (builder.cards[id] || 0) + 1;
+      total++; i++;
+    }
+    renderBuilder();
+  }
+
+  function renderBuilder() {
+    // Deck manager dropdown.
+    const sel = $('b-deckselect');
+    sel.replaceChildren();
+    const optNew = el('option', '', 'New deck…');
+    optNew.value = '';
+    sel.appendChild(optNew);
+    for (const d of customDecks) {
+      const o = el('option', '', esc(d.name));
+      o.value = d.id;
+      if (d.id === builder.editingId) o.selected = true;
+      sel.appendChild(o);
+    }
+    $('b-name').value = builder.name;
+
+    // Leader picker.
+    const lg = $('b-leaders');
+    lg.replaceChildren();
+    for (const c of Object.values(CARDS).filter(c => c.type === 'leader')) {
+      const b = el('button', 'b-leader' + (builder.leader === c.id ? ' selected' : ''), esc(c.name));
+      b.title = `${c.atk}/${c.def} — identity: ${costSymbols(c).join(', ') || 'Void (generic only)'}`;
+      b.onclick = () => { builder.leader = c.id; renderBuilder(); };
+      lg.appendChild(b);
+    }
+
+    // Stats + validation.
+    const v = globalThis.TCG_VALIDATE_DECK(builder.leader, builder.cards, collection.cards);
+    const energyCount = Object.entries(builder.cards)
+      .filter(([id]) => CARDS[id].type === 'energy')
+      .reduce((a, [, n]) => a + n, 0);
+    $('b-stats').innerHTML = `<b>${v.total}</b> cards · ${energyCount} energy · 40–60 required`;
+    const errBox = $('b-errors');
+    errBox.replaceChildren();
+    for (const err of v.errors) errBox.appendChild(el('div', '', esc(err)));
+    $('b-save').disabled = !v.ok;
+
+    // Deck list (energy first, then by cost).
+    const list = $('b-decklist');
+    list.replaceChildren();
+    const entries = Object.entries(builder.cards).sort((a, b) => {
+      const ca = CARDS[a[0]], cb = CARDS[b[0]];
+      const ea = ca.type === 'energy' ? 0 : 1, eb = cb.type === 'energy' ? 0 : 1;
+      return (ea - eb) || (E.costTotal(ca.cost) - E.costTotal(cb.cost)) || ca.name.localeCompare(cb.name);
+    });
+    for (const [id, n] of entries) {
+      const c = CARDS[id];
+      const row = el('div', 'b-entry');
+      row.innerHTML = `<span class="n">${n}×</span><span style="flex:1">${esc(c.name)}</span>` +
+        `<span class="rtag ${c.rarity}">${c.type === 'energy' ? 'energy' : esc(c.rarity)}</span><span class="rm">click to remove</span>`;
+      row.onclick = () => removeFromDeck(id);
+      list.appendChild(row);
+    }
+
+    // Collection grid: energy (always available) then owned, legal collectibles.
+    const grid = $('b-collection');
+    grid.replaceChildren();
+    const showCard = (c, ownedLabel) => {
+      const inDeck = builder.cards[c.id] || 0;
+      const maxed = inDeck >= builderMax(c);
+      const face = cardFace(c, { extraClass: maxed ? 'maxed' : '' });
+      const badges = el('div', 'b-badges');
+      badges.appendChild(el('span', 'own', ownedLabel));
+      badges.appendChild(el('span', 'indeck', inDeck > 0 ? `in deck: ${inDeck}` : ''));
+      face.appendChild(badges);
+      if (!maxed) face.onclick = () => addToDeck(c.id);
+      grid.appendChild(face);
+    };
+    for (const id of ENERGY_IDS) showCard(CARDS[id], id === 'energy_void' ? 'max 3' : 'unlimited');
+    const owned = COLLECTIBLES
+      .filter(id => (collection.cards[id] || 0) > 0 && legalForLeader(CARDS[id]))
+      .sort((a, b) => {
+        const ca = CARDS[a], cb = CARDS[b];
+        return (RARITY_ORDER[cb.rarity] - RARITY_ORDER[ca.rarity]) ||
+          (E.costTotal(ca.cost) - E.costTotal(cb.cost)) || ca.name.localeCompare(cb.name);
+      });
+    for (const id of owned) showCard(CARDS[id], `owned: ${collection.cards[id]}`);
+    const hiddenCount = COLLECTIBLES.filter(id => (collection.cards[id] || 0) > 0 && !legalForLeader(CARDS[id])).length;
+    $('b-collhint').textContent = hiddenCount > 0
+      ? `(${hiddenCount} owned cards hidden — outside this Leader's identity)`
+      : (owned.length === 0 ? '(open booster packs to collect playable cards)' : '');
+  }
+
+  function saveBuilderDeck() {
+    const v = globalThis.TCG_VALIDATE_DECK(builder.leader, builder.cards, collection.cards);
+    if (!v.ok) return;
+    const name = builder.name.trim() || 'Unnamed deck';
+    if (builder.editingId) {
+      const d = customDecks.find(x => x.id === builder.editingId);
+      Object.assign(d, { name, leader: builder.leader, cards: { ...builder.cards } });
+    } else {
+      const id = 'd' + Date.now().toString(36);
+      customDecks.push({ id, name, leader: builder.leader, cards: { ...builder.cards } });
+      builder.editingId = id;
+    }
+    saveCustomDecks();
+    $('b-savemsg').textContent = `Saved — "${name}" is now available in deck selection.`;
+    renderBuilder();
+  }
+
+  $('openbuilder').onclick = showBuilder;
+  $('b-back').onclick = hideBuilder;
+  $('b-deckselect').onchange = e => loadBuilderDeck(e.target.value || null);
+  $('b-new').onclick = () => loadBuilderDeck(null);
+  $('b-delete').onclick = () => {
+    if (!builder.editingId) return;
+    const d = customDecks.find(x => x.id === builder.editingId);
+    if (!confirm(`Delete "${d.name}"?`)) return;
+    customDecks.splice(customDecks.indexOf(d), 1);
+    saveCustomDecks();
+    loadBuilderDeck(customDecks.length > 0 ? customDecks[0].id : null);
+  };
+  $('b-name').oninput = e => { builder.name = e.target.value; };
+  $('b-save').onclick = saveBuilderDeck;
+  $('b-autoenergy').onclick = autoFillEnergy;
+
   $('openpack').onclick = openPack;
   $('packdone').onclick = () => { $('packmodal').style.display = 'none'; renderPacks(); };
   $('togglecollection').onclick = () => {
@@ -224,13 +444,23 @@
     $('deck-col-1').style.display = online() ? 'none' : 'block';
     $('deck-col-0').querySelector('h3').textContent = online() ? 'Your deck' : "Player One's deck";
     $('startbtn').style.display = online() ? 'none' : 'inline-block';
+    const choices = [
+      ...Object.entries(DECKS).map(([key, d]) => ({ key, d, custom: false })),
+      ...customDecks.map(cd => ({
+        key: 'custom:' + cd.id,
+        d: { name: cd.name, leader: cd.leader },
+        custom: true,
+      })),
+    ];
     for (const p of [0, 1]) {
+      if (!deckKeyExists(settings.factions[p])) settings.factions[p] = 'fire';
       const col = $(`deck-col-${p}`);
       col.querySelectorAll('.deck-btn').forEach(b => b.remove());
-      for (const [key, d] of Object.entries(DECKS)) {
+      for (const { key, d, custom } of choices) {
         const b = el('button', 'deck-btn' + (settings.factions[p] === key ? ' selected' : ''));
         const leader = CARDS[d.leader];
-        b.innerHTML = `<b>${esc(d.name)}</b><br><span class="sub">Leader: ${esc(leader.name)} ${costHtml(leader.cost)} ${leader.atk}/${leader.def}</span>`;
+        b.innerHTML = `<b>${esc(d.name)}</b>${custom ? ' <span class="custom-tag">custom</span>' : ''}` +
+          `<br><span class="sub">Leader: ${esc(leader.name)} ${costHtml(leader.cost)} ${leader.atk}/${leader.def}</span>`;
         b.onclick = () => { settings.factions[p] = key; buildSetup(); };
         col.appendChild(b);
       }
@@ -249,7 +479,7 @@
     });
     Net.on('opponent_joined', msg => {
       // Host builds the game and broadcasts it.
-      startOnlineGame(settings.factions[0], msg.guestFaction);
+      startOnlineGame(resolveDeckKey(settings.factions[0]), msg.guestDeck);
     });
     Net.on('joined', () => {
       onlineStatus('Joined — you are Player Two. Waiting for the host to start…');
@@ -272,17 +502,18 @@
       return;
     }
     registerNetHandlers();
+    const myDeck = resolveDeckKey(settings.factions[0]);
     if (action === 'create') {
-      Net.create(settings.factions[0]);
+      Net.create(myDeck);
     } else {
       const code = $('joincode').value.trim().toUpperCase();
       if (code.length !== 4) { onlineStatus('Enter the 4-letter room code.'); return; }
-      Net.join(code, settings.factions[0]);
+      Net.join(code, myDeck);
     }
   }
 
-  function startOnlineGame(hostFaction, guestFaction) {
-    G = E.newGame(hostFaction, guestFaction, {});
+  function startOnlineGame(hostDeck, guestDeck) {
+    G = E.newGame(hostDeck, guestDeck, {});
     resetUiState();
     ui.packsAwarded = false;
     enterGameScreen();
@@ -324,7 +555,7 @@
   $('joinroom').onclick = () => goOnline('join');
 
   function startGame() {
-    G = E.newGame(settings.factions[0], settings.factions[1],
+    G = E.newGame(resolveDeckKey(settings.factions[0]), resolveDeckKey(settings.factions[1]),
       { ai: [settings.mode === 'ai', false] });
     Object.assign(ui, { mode: 'idle', handIdx: null, targetCard: null, moveUid: null,
       respContext: null, directSel: new Set(), directInit: false,

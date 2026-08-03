@@ -45,11 +45,44 @@
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button id="openpack" class="primary">Open a pack</button>
         <button id="togglecollection">View collection</button>
+        <button id="openbuilder">Deck Builder</button>
       </div>
       <div class="packinfo sub-note">Finish any game to earn 2 more packs.</div>
     </div>
   </div>
   <div id="collection" style="display:none"></div>
+</div>
+
+<!-- ========== Deck builder ========== -->
+<div id="builder" style="display:none">
+  <div class="b-topbar">
+    <span class="title">TITANRULE — DECK BUILDER</span>
+    <button id="b-back">Back to menu</button>
+  </div>
+  <div class="builder-layout">
+    <div class="b-left">
+      <h3>Your collection <span class="stat" id="b-collhint"></span></h3>
+      <div id="b-collection" class="b-grid"></div>
+    </div>
+    <div class="b-right">
+      <div class="b-manage">
+        <select id="b-deckselect"></select>
+        <button id="b-new">New</button>
+        <button id="b-delete">Delete</button>
+      </div>
+      <input id="b-name" maxlength="40" placeholder="Deck name">
+      <h3>Leader</h3>
+      <div id="b-leaders"></div>
+      <div id="b-stats" class="packinfo"></div>
+      <div id="b-errors"></div>
+      <div id="b-decklist"></div>
+      <div class="b-actions">
+        <button id="b-autoenergy">Auto-fill energy</button>
+        <button id="b-save" class="primary">Save deck</button>
+      </div>
+      <div id="b-savemsg" class="packinfo"></div>
+    </div>
+  </div>
 </div>
 
 <!-- ========== Game screen ========== -->

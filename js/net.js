@@ -36,8 +36,8 @@
     },
 
     send(msg) { if (this.ws && this.connected) this.ws.send(JSON.stringify(msg)); },
-    create(faction) { this.send({ t: 'create', faction }); },
-    join(code, faction) { this.send({ t: 'join', code, faction }); },
+    create(deck) { this.send({ t: 'create', deck }); },
+    join(code, deck) { this.send({ t: 'join', code, deck }); },
     sendState(g) { this.send({ t: 'state', g }); },
     close() {
       if (this.ws) { this.handlers = {}; this.ws.close(); }

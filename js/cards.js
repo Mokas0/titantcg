@@ -501,10 +501,48 @@
     ],
   };
 
+  /* ---------- Custom deck validation (deck builder) ----------
+   * cardCounts: {cardId: copies}. collectionCards: {cardId: owned}.
+   * Rules: 40–60 cards; every symbol in a card's cost must appear in the
+   * Leader's identity; 3-copy limit (1 for unique) except basic energy and
+   * Void cards, which are unlimited (Void Rift itself is capped at 3); you
+   * cannot run more copies of a collectible than you own. */
+  function validateDeck(leaderId, cardCounts, collectionCards) {
+    const errors = [];
+    const leader = C[leaderId];
+    if (!leader || leader.type !== 'leader') errors.push('Choose a Leader.');
+    const identity = leader ? costSymbols(leader) : [];
+    let total = 0;
+    for (const [id, n] of Object.entries(cardCounts)) {
+      if (!n || n <= 0) continue;
+      const c = C[id];
+      if (!c || c.type === 'leader') { errors.push(`Illegal card: ${id}.`); continue; }
+      total += n;
+      const syms = costSymbols(c);
+      if (!syms.every(s => identity.includes(s)))
+        errors.push(`${c.name} falls outside your Leader's faction identity.`);
+      const isVoidCard = c.type !== 'energy' && syms.length === 0;
+      if (c.type === 'energy') {
+        if (id === 'energy_void' && n > 3) errors.push('Void Rift is limited to 3 copies.');
+      } else if (!isVoidCard) {
+        const limit = c.unique ? 1 : 3;
+        if (n > limit) errors.push(`${c.name}: at most ${limit} ${limit === 1 ? 'copy' : 'copies'}.`);
+      }
+      if (c.type !== 'energy') {
+        const owned = (collectionCards && collectionCards[id]) || 0;
+        if (n > owned) errors.push(`${c.name}: you own ${owned}, the deck runs ${n}.`);
+      }
+    }
+    if (total < 40) errors.push(`${total} cards — a deck needs at least 40.`);
+    if (total > 60) errors.push(`${total} cards — a deck may hold at most 60.`);
+    return { ok: errors.length === 0, errors, total };
+  }
+
   const ENERGY_NAMES = { F: 'Fire', W: 'Water', N: 'Nature', E: 'Earth', L: 'Light', D: 'Dark', V: 'Void', G: 'Generic' };
 
   globalThis.TCG_CARDS = C;
   globalThis.TCG_DECKS = DECKS;
+  globalThis.TCG_VALIDATE_DECK = validateDeck;
   globalThis.TCG_PACK = PACK;
   globalThis.TCG_COLLECTIBLES = COLLECTIBLES;
   globalThis.TCG_COST_SYMBOLS = costSymbols;

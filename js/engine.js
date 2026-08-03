@@ -66,12 +66,13 @@
       log: [],
     };
     for (const [i, faction] of [factionA, factionB].entries()) {
-      const list = DECKS[faction];
+      // Accept a prebuilt deck key or a full deck spec {name, leader, cards}.
+      const list = typeof faction === 'string' ? DECKS[faction] : faction;
       const deck = [];
       for (const [id, count] of list.cards) for (let k = 0; k < count; k++) deck.push(id);
       shuffle(deck);
       g.players.push({
-        faction,
+        faction: typeof faction === 'string' ? faction : 'custom',
         deckName: list.name,
         leaderId: list.leader,
         leaderCasts: 0,       // times cast so far (escalation counter)

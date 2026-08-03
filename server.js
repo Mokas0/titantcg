@@ -41,7 +41,16 @@ const server = http.createServer((req, res) => {
 
 /* ---------- Rooms ---------- */
 
-const rooms = new Map(); // code -> { clients: [ws|null, ws|null], factions: [str|null, str|null] }
+/* code -> { clients: [ws|null, ws|null], decks: [spec|null, spec|null] }
+ * A deck spec is {name, leader, cards:[[cardId, count], ...]} — custom decks
+ * exist only in their owner's browser, so the full spec travels with the
+ * lobby messages. */
+const rooms = new Map();
+
+function deckSpec(raw) {
+  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.cards)) return null;
+  return { name: String(raw.name || 'Deck'), leader: String(raw.leader || ''), cards: raw.cards };
+}
 
 function makeCode() {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -66,23 +75,27 @@ wss.on('connection', ws => {
     if (!msg || typeof msg.t !== 'string') return;
 
     if (msg.t === 'create') {
+      const deck = deckSpec(msg.deck);
+      if (!deck) { send(ws, { t: 'error', err: 'Bad deck.' }); return; }
       const code = makeCode();
-      rooms.set(code, { clients: [ws, null], factions: [String(msg.faction || 'fire'), null] });
+      rooms.set(code, { clients: [ws, null], decks: [deck, null] });
       ws.room = code; ws.seat = 0;
       send(ws, { t: 'created', code, seat: 0 });
       return;
     }
     if (msg.t === 'join') {
+      const deck = deckSpec(msg.deck);
+      if (!deck) { send(ws, { t: 'error', err: 'Bad deck.' }); return; }
       const code = String(msg.code || '').toUpperCase();
       const room = rooms.get(code);
       if (!room) { send(ws, { t: 'error', err: 'No such room.' }); return; }
       if (room.clients[1]) { send(ws, { t: 'error', err: 'Room is full.' }); return; }
       room.clients[1] = ws;
-      room.factions[1] = String(msg.faction || 'water');
+      room.decks[1] = deck;
       ws.room = code; ws.seat = 1;
-      send(ws, { t: 'joined', seat: 1, hostFaction: room.factions[0] });
+      send(ws, { t: 'joined', seat: 1 });
       // The host builds the game and broadcasts the first state.
-      send(room.clients[0], { t: 'opponent_joined', guestFaction: room.factions[1] });
+      send(room.clients[0], { t: 'opponent_joined', guestDeck: room.decks[1] });
       return;
     }
     if (msg.t === 'state') {

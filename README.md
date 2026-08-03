@@ -64,9 +64,24 @@ Rarity is shown as a colored edge and tag on every card.
 The main menu has a **booster pack** opener: each pack holds 8 cards — 5 commons,
 2 uncommons, and a rare slot with a 15% chance to upgrade to a titan. You start with
 5 packs and earn 2 more every time you finish a game. Your collection is saved in the
-browser (localStorage) and can be browsed per faction from the menu. Packs are a
-collection meta-game for now — the prebuilt decks already showcase the whole pool, and a
-deck builder is the natural next step.
+browser (localStorage) and can be browsed per faction from the menu.
+
+## Deck builder
+
+Pack pulls are playable: the **Deck Builder** (main menu) builds custom decks from your
+collection. Pick any Leader — the collection view filters to cards inside that Leader's
+faction identity — then click cards to add them and deck entries to remove them.
+Validation is live and enforces the construction rules from RULES.md:
+
+- 40–60 cards; basic energy is unlimited (Void Rift capped at 3), and **Auto-fill
+  energy** tops the deck up to 40 with basics matching your Leader's identity;
+- every energy symbol in a card's cost must appear in the Leader's identity;
+- 3 copies max per card (1 for uniques) — except Void cards, which allow any number;
+- you can't run more copies of a collectible than you own.
+
+Saved decks persist in localStorage and appear in deck selection for **every mode** —
+hotseat, solo vs AI, and online. Online play sends the full deck list with the room
+handshake, so your opponent doesn't need your deck to exist on their machine.
 
 ## How a turn plays
 

@@ -44,6 +44,40 @@ for (const slot of globalThis.TCG_PACK.slots) {
   }
 }
 console.log(`collectible pool: ${globalThis.TCG_COLLECTIBLES.length} cards`);
+
+/* ---------- Deck-builder validation ---------- */
+const V = globalThis.TCG_VALIDATE_DECK;
+function expectDeck(label, res, ok, errPattern) {
+  const passed = res.ok === ok && (!errPattern || res.errors.some(e => errPattern.test(e)));
+  if (!passed) { console.error(`validateDeck ${label}: got ok=${res.ok}, errors=${JSON.stringify(res.errors)}`); bad++; }
+  else console.log(`validateDeck ${label}: ok`);
+}
+const own = { ember_whelp: 3, lava_bolt: 3, ashborn_raider: 3, pyre_zealot: 3,
+  flame_adept: 3, searing_brand: 3, battle_fury: 2, void_crawler: 5, tidecaller: 3 };
+const goodDeck = { energy_fire: 19, energy_void: 1, ember_whelp: 3, lava_bolt: 3,
+  ashborn_raider: 3, pyre_zealot: 3, flame_adept: 3, searing_brand: 3, battle_fury: 2 };
+expectDeck('valid 40-card fire deck', V('leader_fire', goodDeck, own), true);
+expectDeck('too small', V('leader_fire', { energy_fire: 39 }, own), false, /at least 40/);
+expectDeck('too big', V('leader_fire', { energy_fire: 61 }, own), false, /at most 60/);
+expectDeck('identity violation', V('leader_fire', { ...goodDeck, tidecaller: 1 }, own), false, /identity/);
+expectDeck('copy limit', V('leader_fire', { ...goodDeck, lava_bolt: 4 }, own), false, /at most 3/);
+expectDeck('not owned', V('leader_fire', { ...goodDeck, immolate: 1 }, own), false, /you own 0/);
+expectDeck('void rift cap', V('leader_fire', { ...goodDeck, energy_void: 4 }, own), false, /Void Rift/);
+expectDeck('void any-number within owned',
+  V('leader_hollow', { energy_void: 3, energy_fire: 32, void_crawler: 5 }, own), true);
+expectDeck('void limited by ownership',
+  V('leader_hollow', { energy_fire: 34, void_crawler: 6 }, own), false, /you own 5/);
+
+/* Engine accepts a full deck spec (as used for custom decks and online play). */
+{
+  const spec = { name: 'Custom Burn', leader: 'leader_fire', cards: Object.entries(goodDeck) };
+  const g = E.newGame(spec, 'earth', { ai: [true, true] });
+  let t = 0;
+  while (g.winner === null && t++ < 300) AI.takeFullTurn(g);
+  if (g.winner === null) { console.error('custom-spec game never finished'); bad++; }
+  else console.log(`custom-spec deck game: P${g.winner + 1} wins in ${t} turns`);
+}
+
 if (bad) { console.error(`${bad} static validation errors`); process.exit(1); }
 
 let games = 0, failures = 0;

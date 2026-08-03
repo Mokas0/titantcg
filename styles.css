@@ -83,6 +83,39 @@ h1, h2, h3 { font-weight: 600; }
 .coll-group .card.unowned { opacity: 0.3; }
 .coll-count { float: right; color: var(--accent); font-weight: 700; }
 
+/* ---------- Deck builder ---------- */
+#builder { max-width: 1280px; margin: 0 auto; padding: 10px 14px 40px; }
+.b-topbar { display: flex; justify-content: space-between; align-items: center; padding: 6px 0 12px; }
+.b-topbar .title { color: var(--accent); letter-spacing: 3px; font-weight: 700; }
+.builder-layout { display: flex; gap: 16px; align-items: flex-start; }
+.b-left { flex: 1; min-width: 0; }
+.b-left h3, .b-right h3 { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 10px 0 6px; }
+.b-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+.b-grid .card { cursor: pointer; position: relative; }
+.b-grid .card.maxed { opacity: 0.4; cursor: default; }
+.b-badges { display: flex; justify-content: space-between; margin-top: 4px; font-size: 10px; }
+.b-badges .own { color: var(--muted); }
+.b-badges .indeck { color: var(--accent); font-weight: 700; }
+.b-right { width: 340px; flex-shrink: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.b-manage { display: flex; gap: 6px; margin-bottom: 8px; }
+.b-manage select { flex: 1; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px; }
+#b-name { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 14px; margin-bottom: 4px; }
+#b-leaders { display: flex; gap: 4px; flex-wrap: wrap; }
+.b-leader { font-size: 11px; padding: 4px 8px; }
+.b-leader.selected { border-color: var(--accent); background: #2c2a20; color: var(--accent); }
+#b-errors { color: #e05d3d; font-size: 12px; margin: 6px 0; }
+#b-errors div { padding: 1px 0; }
+#b-decklist { margin: 8px 0; max-height: 40vh; overflow-y: auto; }
+.b-entry {
+  display: flex; justify-content: space-between; align-items: center; gap: 6px;
+  border-bottom: 1px dotted #262b38; padding: 3px 4px; cursor: pointer; font-size: 12px;
+}
+.b-entry:hover { background: var(--panel2); }
+.b-entry .n { color: var(--accent); font-weight: 700; min-width: 24px; }
+.b-entry .rm { color: var(--muted); font-size: 10px; }
+.b-actions { display: flex; gap: 8px; }
+.deck-btn .custom-tag { color: var(--accent); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+
 /* ---------- Game layout ---------- */
 #game { display: none; max-width: 1180px; margin: 0 auto; padding: 10px 14px 220px; }
 #topbar {
