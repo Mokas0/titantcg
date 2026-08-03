@@ -199,12 +199,58 @@
       tempA: 0, tempD: 0, permA: 0, permD: 0,
       augments: [],           // cardIds
       attune: c.attune ? { ...c.attune } : undefined,
+      range: c.range || 0,
+      triggers: c.triggers || null,
       isLeader: !!flags.isLeader,
       isToken: !!flags.isToken,
       enteredTurn: g.turnCount,
     };
     g.units.push(u);
+    fireTrigger(g, u, 'arrival');
     return u;
+  }
+
+  /* ---------- Triggered abilities (Arrival / Last Word) ---------- */
+
+  function fireTrigger(g, u, when) {
+    const spec = u.triggers && u.triggers[when];
+    if (!spec) return;
+    const label = when === 'arrival' ? 'Arrival' : 'Last Word';
+    const p = u.owner;
+    switch (spec.kind) {
+      case 'draw':
+      case 'gainLife':
+      case 'dmgPlayer':
+      case 'rampEnergy':
+        log(g, `${u.name} — ${label}:`);
+        applyEffect(g, p, { name: u.name, effect: spec }, {});
+        break;
+      case 'dmgEnemiesInRow': {
+        const foes = sideInRow(g, u.row, other(p));
+        for (const f of foes) f.damage += spec.n;
+        log(g, `${u.name} — ${label}: ${spec.n} damage to each enemy in row ${u.row + 1}.`);
+        checkDeaths(g, `${u.name}'s ${label}`);
+        break;
+      }
+      case 'tokensHere':
+        for (let i = 0; i < spec.count; i++) {
+          makeUnit(g, p, { id: null, name: spec.name, atk: spec.a, def: spec.d, move: 2, keywords: [] },
+                   u.row, { isToken: true });
+        }
+        log(g, `${u.name} — ${label}: ${spec.count} ${spec.name} token${spec.count > 1 ? 's' : ''} on row ${u.row + 1}.`);
+        break;
+      case 'buffAlliesInRow': {
+        const allies = sideInRow(g, u.row, p).filter(a => a.uid !== u.uid);
+        for (const a of allies) {
+          if (spec.temp) { a.tempA += spec.a; a.tempD += spec.d; }
+          else { a.permA += spec.a; a.permD += spec.d; }
+        }
+        if (allies.length > 0)
+          log(g, `${u.name} — ${label}: allies in row ${u.row + 1} get +${spec.a}/+${spec.d}${spec.temp ? ' until end of turn' : ''}.`);
+        checkDeaths(g, `${u.name}'s ${label}`);
+        break;
+      }
+    }
   }
 
   function unit(g, uid) { return g.units.find(u => u.uid === uid) || null; }
@@ -260,6 +306,7 @@
       pl.discard.push(u.cardId);
       log(g, `${u.name} is destroyed${cause ? ` (${cause})` : ''}.`);
     }
+    fireTrigger(g, u, 'lastword');
   }
 
   /* State-based check: any unit whose damage meets its (possibly reduced)
@@ -299,8 +346,8 @@
       if (!canDeployRow(p, opts.row)) return { ok: false, err: 'Deploy to one of your two nearest rows.' };
       payCost(g, p, c.cost);
       pl.hand.splice(handIdx, 1);
-      makeUnit(g, p, c, opts.row);
       log(g, `${playerName(p)} deploys ${c.name} to row ${opts.row + 1}.`);
+      makeUnit(g, p, c, opts.row);
       return { ok: true };
     }
     if (c.type === 'augment') {
@@ -346,8 +393,8 @@
     pl.leaderCasts++;
     pl.leaderInPlay = true;
     const c = card(pl.leaderId);
-    makeUnit(g, p, c, row, { isLeader: true });
     log(g, `${playerName(p)} casts ${c.name} (cast #${pl.leaderCasts}) to row ${row + 1}.`);
+    makeUnit(g, p, c, row, { isLeader: true });
     return { ok: true };
   }
 
@@ -629,103 +676,120 @@
     return rows;
   }
 
+  /* How a unit participates in combat this fight phase.
+   * melee: shares its row with enemies — must assign its full attack there.
+   * ranged: own row clear and Range N reaches enemies up to N rows toward
+   *   the enemy edge — may assign any amount up to its attack (holding fire
+   *   is allowed), and takes no return fire from melee.
+   * none: cannot participate. */
+  function combatTargets(g, u) {
+    const foes = sideInRow(g, u.row, other(u.owner));
+    if (foes.length > 0) return { mode: 'melee', targets: foes };
+    if (u.range > 0) {
+      const fwd = forward(u.owner);
+      const targets = [];
+      for (let d = 1; d <= u.range; d++) {
+        const row = u.row + fwd * d;
+        if (row < 0 || row > 4) break;
+        targets.push(...sideInRow(g, row, other(u.owner)));
+      }
+      if (targets.length > 0) return { mode: 'ranged', targets };
+    }
+    return { mode: 'none', targets: [] };
+  }
+
+  function combatants(g, p) {
+    return g.units.filter(u => u.owner === p && combatTargets(g, u).mode !== 'none');
+  }
+
+  function anyCombat(g) {
+    return combatants(g, 0).length > 0 || combatants(g, 1).length > 0;
+  }
+
   function finishMoves(g) {
     g.fightStep = 'assign';
     g.assign = {};
-    if (contestedRows(g).length === 0) {
-      log(g, `No contested rows.`);
+    if (!anyCombat(g)) {
+      log(g, `No combat.`);
       prepDirect(g);
     }
   }
 
-  /* Greedy auto-assignment for player p's units in every contested row:
-   * satisfy Guard first, then concentrate damage to kill cheapest-to-kill
-   * enemies, dumping any overkill onto the last target. */
+  /* Greedy auto-assignment for player p: melee units must spend their full
+   * attack in their row; ranged units fire only while there is a productive
+   * kill to contribute to. Guards in each target row are saturated to
+   * lethal before non-guards are touched. */
   function autoAssignFor(g, p) {
-    for (const r of contestedRows(g)) {
-      const mine = sideInRow(g, r, p);
-      const foes = sideInRow(g, r, other(p));
-      const incoming = {};           // planned damage per enemy uid this pass
-      for (const f of foes) incoming[f.uid] = 0;
-      let budget = mine.reduce((s, u) => s + effAtk(g, u), 0);
-      const orderOfKill = [];
-      const guards = foes.filter(f => hasKw(f, 'guard'));
-      const rest = foes.filter(f => !hasKw(f, 'guard'));
-      guards.sort((a, b) => remainingDef(g, a) - remainingDef(g, b));
-      rest.sort((a, b) => remainingDef(g, a) - remainingDef(g, b));
-      // Guards must be dealt with first; only plan damage past them if we
-      // can assign lethal to every guard.
-      const guardTotal = guards.reduce((s, f) => s + remainingDef(g, f), 0);
-      if (guards.length > 0 && budget <= guardTotal) {
-        orderOfKill.push(...guards);
-      } else {
-        orderOfKill.push(...guards, ...rest);
-      }
-      for (const f of orderOfKill) {
-        const want = Math.min(budget, Math.max(remainingDef(g, f), 0));
-        incoming[f.uid] += want;
-        budget -= want;
-        if (budget === 0) break;
-      }
-      // Dump leftover damage onto the toughest planned target.
-      if (budget > 0 && orderOfKill.length > 0) {
-        incoming[orderOfKill[orderOfKill.length - 1].uid] += budget;
-        budget = 0;
-      }
-      // Convert row-level plan into per-unit assignments.
-      const owed = { ...incoming };
-      for (const u of mine) {
-        let dmg = effAtk(g, u);
-        const map = {};
-        for (const f of foes) {
-          if (dmg === 0) break;
-          const give = Math.min(dmg, owed[f.uid]);
-          if (give > 0) { map[f.uid] = give; owed[f.uid] -= give; dmg -= give; }
+    for (const u of g.units) if (u.owner === p) delete g.assign[u.uid];
+    const planned = {};   // enemy uid -> damage planned by p so far
+    for (const u of g.units.filter(x => x.owner === p)) {
+      const { mode, targets } = combatTargets(g, u);
+      if (mode === 'none') continue;
+      const map = {};
+      let budget = effAtk(g, u);
+      if (budget > 0) {
+        const need = t => Math.max(0, remainingDef(g, t) - (planned[t.uid] || 0));
+        const byNeed = (a, b) => need(a) - need(b);
+        const ordered = [];
+        for (const r of [...new Set(targets.map(t => t.row))]) {
+          const inRow = targets.filter(t => t.row === r);
+          ordered.push(...inRow.filter(t => hasKw(t, 'guard')).sort(byNeed),
+                       ...inRow.filter(t => !hasKw(t, 'guard')).sort(byNeed));
         }
-        if (dmg > 0 && foes.length > 0) {
-          const last = foes[foes.length - 1].uid;
-          map[last] = (map[last] || 0) + dmg;
+        for (const t of ordered) {
+          if (budget <= 0) break;
+          const n = Math.min(budget, need(t));
+          if (n <= 0) continue;
+          map[t.uid] = (map[t.uid] || 0) + n;
+          planned[t.uid] = (planned[t.uid] || 0) + n;
+          budget -= n;
         }
-        g.assign[u.uid] = map;
+        // Melee must assign everything; overkill goes on the last target.
+        if (mode === 'melee' && budget > 0) {
+          const dump = targets[targets.length - 1];
+          map[dump.uid] = (map[dump.uid] || 0) + budget;
+          planned[dump.uid] = (planned[dump.uid] || 0) + budget;
+        }
       }
+      g.assign[u.uid] = map;
     }
   }
 
-  /* Fill any unassigned damage, then validate totals and the Guard rule.
-   * Returns {ok, err}. */
+  /* Validate all assignments: reachability, melee totals exact, ranged
+   * totals capped, and the Guard rule per target row. Returns {ok, err}. */
   function validateAssignments(g) {
-    for (const r of contestedRows(g)) {
-      for (const p of [0, 1]) {
-        const mine = sideInRow(g, r, p);
-        const foes = sideInRow(g, r, other(p));
-        // Per-unit totals must equal the unit's attack (mandatory combat).
-        for (const u of mine) {
-          const map = g.assign[u.uid] || {};
-          let total = 0;
-          for (const [tu, n] of Object.entries(map)) {
-            if (n < 0) return { ok: false, err: 'Negative damage assigned.' };
-            if (!foes.some(f => f.uid === +tu))
-              return { ok: false, err: `${u.name} may only assign damage to enemies in its row.` };
-            total += n;
-          }
-          if (total !== effAtk(g, u))
-            return { ok: false, err: `${u.name} must assign exactly ${effAtk(g, u)} damage.` };
+    for (const p of [0, 1]) {
+      const totalTo = {};   // enemy uid -> combined damage from p
+      for (const u of g.units.filter(x => x.owner === p)) {
+        const { mode, targets } = combatTargets(g, u);
+        const map = g.assign[u.uid] || {};
+        let total = 0;
+        for (const [tu, n] of Object.entries(map)) {
+          if (n < 0) return { ok: false, err: 'Negative damage assigned.' };
+          if (n === 0) continue;
+          if (!targets.some(t => t.uid === +tu))
+            return { ok: false, err: `${u.name} cannot reach that target.` };
+          total += n;
+          totalTo[tu] = (totalTo[tu] || 0) + n;
         }
-        // Guard: enemies with damage assigned to non-guards require every
-        // guard to have lethal assigned (from this side's combined attacks).
-        const guards = foes.filter(f => hasKw(f, 'guard'));
-        if (guards.length > 0) {
-          const totalTo = {};
-          for (const u of mine) {
-            for (const [tu, n] of Object.entries(g.assign[u.uid] || {}))
-              totalTo[tu] = (totalTo[tu] || 0) + n;
-          }
-          const hitsNonGuard = foes.some(f => !hasKw(f, 'guard') && (totalTo[f.uid] || 0) > 0);
-          if (hitsNonGuard) {
-            for (const gu of guards) {
-              if ((totalTo[gu.uid] || 0) < remainingDef(g, gu))
-                return { ok: false, err: `Guard: ${gu.name} must be assigned lethal damage first.` };
-            }
+        if (mode === 'melee' && total !== effAtk(g, u))
+          return { ok: false, err: `${u.name} must assign exactly ${effAtk(g, u)} damage.` };
+        if (mode === 'ranged' && total > effAtk(g, u))
+          return { ok: false, err: `${u.name} may assign at most ${effAtk(g, u)} damage.` };
+        if (mode === 'none' && total > 0)
+          return { ok: false, err: `${u.name} has no legal targets.` };
+      }
+      // Guard: in any row where p damages a non-guard, every guard there
+      // must have lethal assigned from p's combined attacks.
+      for (let r = 0; r < 5; r++) {
+        const defenders = sideInRow(g, r, other(p));
+        const guards = defenders.filter(f => hasKw(f, 'guard'));
+        if (guards.length === 0) continue;
+        const hitsNonGuard = defenders.some(f => !hasKw(f, 'guard') && (totalTo[f.uid] || 0) > 0);
+        if (hitsNonGuard) {
+          for (const gu of guards) {
+            if ((totalTo[gu.uid] || 0) < remainingDef(g, gu))
+              return { ok: false, err: `Guard: ${gu.name} must be assigned lethal damage first.` };
           }
         }
       }
@@ -733,71 +797,64 @@
     return { ok: true };
   }
 
-  /* Top up any unit whose assigned damage is short of its attack: guards
-   * needing lethal first, then cheapest kills, overkill onto a legal target. */
+  /* Top up melee units whose assigned damage is short of their attack
+   * (melee is mandatory; ranged fire is optional and never topped up):
+   * guards needing lethal first, then cheapest kills, overkill last. */
   function topUpAssignments(g) {
-    for (const r of contestedRows(g)) {
-      for (const p of [0, 1]) {
-        const mine = sideInRow(g, r, p);
-        const foes = sideInRow(g, r, other(p));
-        if (foes.length === 0) continue;
-        const totalTo = {};
-        for (const u of mine) {
-          for (const [tu, n] of Object.entries(g.assign[u.uid] || {}))
-            totalTo[tu] = (totalTo[tu] || 0) + n;
-        }
-        const guards = foes.filter(f => hasKw(f, 'guard'));
-        const give = (u, f, n) => {
-          const map = g.assign[u.uid] || (g.assign[u.uid] = {});
-          map[f.uid] = (map[f.uid] || 0) + n;
-          totalTo[f.uid] = (totalTo[f.uid] || 0) + n;
+    for (const p of [0, 1]) {
+      const planned = {};
+      for (const u of g.units.filter(x => x.owner === p)) {
+        for (const [tu, n] of Object.entries(g.assign[u.uid] || {}))
+          planned[tu] = (planned[tu] || 0) + n;
+      }
+      for (const u of g.units.filter(x => x.owner === p)) {
+        const { mode, targets } = combatTargets(g, u);
+        if (mode !== 'melee') continue;
+        const map = g.assign[u.uid] || (g.assign[u.uid] = {});
+        let rem = effAtk(g, u) - Object.values(map).reduce((a, b) => a + b, 0);
+        if (rem <= 0) continue;
+        const give = (t, n) => {
+          map[t.uid] = (map[t.uid] || 0) + n;
+          planned[t.uid] = (planned[t.uid] || 0) + n;
+          rem -= n;
         };
-        for (const u of mine) {
-          const map = g.assign[u.uid] || (g.assign[u.uid] = {});
-          let rem = effAtk(g, u) - Object.values(map).reduce((a, b) => a + b, 0);
-          // Guards lacking lethal come first.
-          for (const f of guards) {
-            if (rem <= 0) break;
-            const need = Math.max(0, remainingDef(g, f) - (totalTo[f.uid] || 0));
-            if (need > 0) { const n = Math.min(rem, need); give(u, f, n); rem -= n; }
-          }
-          // Then cheapest remaining kills among the rest.
-          const rest = foes.filter(f => !hasKw(f, 'guard'))
+        const guards = targets.filter(t => hasKw(t, 'guard'));
+        for (const t of guards) {
+          if (rem <= 0) break;
+          const need = Math.max(0, remainingDef(g, t) - (planned[t.uid] || 0));
+          if (need > 0) give(t, Math.min(rem, need));
+        }
+        const guardsLethal = guards.every(t => (planned[t.uid] || 0) >= remainingDef(g, t));
+        if (guardsLethal) {
+          const rest = targets.filter(t => !hasKw(t, 'guard'))
             .sort((a, b) => remainingDef(g, a) - remainingDef(g, b));
-          const guardsLethal = guards.every(f => (totalTo[f.uid] || 0) >= remainingDef(g, f));
-          if (guardsLethal) {
-            for (const f of rest) {
-              if (rem <= 0) break;
-              const need = Math.max(0, remainingDef(g, f) - (totalTo[f.uid] || 0));
-              if (need > 0) { const n = Math.min(rem, need); give(u, f, n); rem -= n; }
-            }
-          }
-          // Overkill: onto a guard if guards still stand, else the last foe.
-          if (rem > 0) {
-            const dump = guards.length > 0 && !guardsLethal ? guards[0]
-              : (guards.length > 0 ? guards[0] : foes[foes.length - 1]);
-            give(u, dump, rem);
+          for (const t of rest) {
+            if (rem <= 0) break;
+            const need = Math.max(0, remainingDef(g, t) - (planned[t.uid] || 0));
+            if (need > 0) give(t, Math.min(rem, need));
           }
         }
+        if (rem > 0) give(guards.length > 0 ? guards[0] : targets[targets.length - 1], rem);
       }
     }
   }
 
-  /* Complete assignments, validate, then resolve all contested rows
-   * simultaneously. */
+  /* Complete assignments, validate, then resolve all combat simultaneously.
+   * Melee participants always count as having fought; ranged units count
+   * only if they actually fired. */
   function resolveCombat(g) {
     topUpAssignments(g);
     const v = validateAssignments(g);
     if (!v.ok) return v;
 
-    const rows = contestedRows(g);
     const totals = {}; // uid -> incoming damage
-    for (const r of rows) {
-      for (const u of unitsInRow(g, r)) {
-        g.fought.push(u.uid);
-        for (const [tu, n] of Object.entries(g.assign[u.uid] || {}))
-          totals[tu] = (totals[tu] || 0) + n;
-      }
+    for (const u of g.units) {
+      const { mode } = combatTargets(g, u);
+      const map = g.assign[u.uid] || {};
+      const total = Object.values(map).reduce((a, b) => a + b, 0);
+      if (mode === 'melee' || total > 0) g.fought.push(u.uid);
+      for (const [tu, n] of Object.entries(map))
+        totals[tu] = (totals[tu] || 0) + n;
     }
     for (const [tu, n] of Object.entries(totals)) {
       const t = unit(g, +tu);
@@ -887,6 +944,15 @@
       else if (dead1) setWinner(g, 0, 'sudden death');
       if (g.winner !== null) return;
     }
+    // Growth: units that swell at the start of their controller's turn.
+    for (const u of g.units) {
+      if (u.owner === p && u.triggers && u.triggers.growth) {
+        const gr = u.triggers.growth;
+        u.permA += gr.a || 0;
+        u.permD += gr.d || 0;
+        log(g, `${u.name} grows +${gr.a || 0}/+${gr.d || 0}.`);
+      }
+    }
     // Draw phase.
     drawCards(g, p, 1);
   }
@@ -925,7 +991,8 @@
     unit, unitsInRow, sideInRow, effAtk, effDef, remainingDef, hasKw,
     destroyUnit, checkDeaths,
     beginFight, legalMoveRows, moveUnit, finishMoves,
-    contestedRows, autoAssignFor, validateAssignments, resolveCombat,
+    contestedRows, combatTargets, combatants, anyCombat,
+    autoAssignFor, validateAssignments, resolveCombat,
     prepDirect, doDirectAttacks, endTurn, startTurn,
     setWinner,
   };

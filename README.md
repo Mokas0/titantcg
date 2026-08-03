@@ -124,10 +124,14 @@ Win by reducing the enemy from 20 life to 0 — or by decking them out. From rou
 forever (the phase bar shows the clock coming). A one-time **mulligan** is offered at the
 start of your first turn, and the fight phase auto-skips when nothing can move or fight.
 
-Five positional keywords ride the row system: **Siege** (attack the player from one row
+Positional keywords ride the row system: **Siege** (attack the player from one row
 out, over the garrison), **Bloodrage** (+1 attack per wound — persistent damage as fuel),
 **Momentum** (permanently stronger for every row advanced), **Phalanx** (+1/+1 in
-formation), and **Attunement** (payoffs for stacking one energy type).
+formation), **Attunement** (payoffs for stacking one energy type), and **Range N** —
+archers strike enemies up to N rows ahead with no return fire, but are optional to fire,
+respect Guard, and get locked into melee if their row is contested. Triggered abilities
+round it out: **Arrival** (on deploy), **Last Word** (on death — sacrifice counts), and
+**Growth** (swells every turn it survives).
 
 ## Repository layout
 

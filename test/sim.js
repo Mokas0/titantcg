@@ -31,6 +31,22 @@ for (const r of ['common', 'uncommon', 'rare', 'titan']) {
   const D = globalThis.TCG_DUST;
   if (!(D.disenchant[r] > 0 && D.craft[r] > D.disenchant[r])) { console.error(`bad dust rates for ${r}`); bad++; }
 }
+const TRIGGER_KINDS = new Set(['draw', 'gainLife', 'dmgPlayer', 'rampEnergy',
+  'dmgEnemiesInRow', 'tokensHere', 'buffAlliesInRow']);
+for (const c of Object.values(CARDS)) {
+  if (c.range !== undefined && !(Number.isInteger(c.range) && c.range >= 0 && c.range <= 3)) {
+    console.error(`bad range on ${c.id}`); bad++;
+  }
+  if (c.triggers) {
+    for (const [when, spec] of Object.entries(c.triggers)) {
+      if (when === 'growth') {
+        if (!((spec.a || 0) >= 0 && (spec.d || 0) >= 0)) { console.error(`bad growth on ${c.id}`); bad++; }
+      } else if (!['arrival', 'lastword'].includes(when) || !TRIGGER_KINDS.has(spec.kind)) {
+        console.error(`bad trigger on ${c.id}: ${when}/${spec.kind}`); bad++;
+      }
+    }
+  }
+}
 for (const [key, d] of Object.entries(globalThis.TCG_DECKS)) {
   const size = d.cards.reduce((s, [, n]) => s + n, 0);
   if (size < 40 || size > 60) { console.error(`deck ${key} has illegal size ${size}`); bad++; }
@@ -132,6 +148,81 @@ function check(label, cond) {
   E.prepDirect(g);
   check('siege attacks over the garrison, plain unit cannot',
     g.directEligible.includes(905) && !g.directEligible.includes(906));
+}
+{
+  // Range: participation modes, optional fire, melee lock, guard, no return fire.
+  const g = E.newGame('fire', 'earth', {});
+  g.units.length = 0;
+  const mk = (uid, owner, row, extra) => {
+    const u = { uid, cardId: null, name: 'u' + uid, owner, row, atk: 2, def: 3, move: 2,
+      keywords: [], damage: 0, tempA: 0, tempD: 0, permA: 0, permD: 0, augments: [],
+      range: 0, enteredTurn: 0, ...extra };
+    g.units.push(u);
+    return u;
+  };
+  const archer = mk(910, 0, 1, { range: 2, atk: 3 });
+  const foe = mk(911, 1, 3, {});
+  check('archer is ranged at 2 rows', E.combatTargets(g, archer).mode === 'ranged'
+    && E.combatTargets(g, archer).targets.some(t => t.uid === 911));
+  check('melee foe of empty row does not participate', E.combatTargets(g, foe).mode === 'none');
+  check('anyCombat sees a one-sided archer duel', E.anyCombat(g));
+  // Optional fire: archer may assign 0.
+  E.beginFight(g); E.finishMoves(g);
+  g.assign = { 910: {} };
+  check('ranged may hold fire', E.resolveCombat(g).ok && g.units.length === 2 && foe.damage === 0);
+  // Firing: no return damage.
+  E.beginFight(g); E.finishMoves(g);
+  g.assign = { 910: { 911: 3 } };
+  check('ranged fire resolves with no return', E.resolveCombat(g).ok
+    && foe.damage === 3 && archer.damage === 0);
+  // Guard protects rows against arrows.
+  const wall = mk(912, 1, 3, { keywords: ['guard'], def: 5 });
+  E.beginFight(g); E.finishMoves(g);
+  g.assign = { 910: { 911: 3 } };
+  check('guard blocks ranged assignment past it', !E.resolveCombat(g).ok);
+  // Melee lock: an enemy in the archer's row forces melee there.
+  mk(913, 1, 1, {});
+  check('archer in contested row is melee-locked', E.combatTargets(g, archer).mode === 'melee');
+}
+{
+  // Triggers: arrival, last word (with cascade), growth.
+  const g = E.newGame('light', 'dark', {});
+  check('arrival draw via card play', (function () {
+    // Put a Herald of Dawn in hand and play it with energy cheated in.
+    g.players[0].hand = ['herald_of_dawn'];
+    g.players[0].energy = [
+      { cardId: 'energy_light', provides: 'L', tapped: false },
+      { cardId: 'energy_light', provides: 'L', tapped: false },
+      { cardId: 'energy_light', provides: 'L', tapped: false },
+    ];
+    g.activePlayer = 0; g.phase = 'main1';
+    const res = E.playCard(g, 0, 0, { row: 0 });
+    return res.ok && g.players[0].hand.length === 1; // played 1, drew 1
+  })());
+  check('last word blast cascades', (function () {
+    // Plague Husk dies; its blast finishes a wounded enemy in the row.
+    g.units.length = 0;
+    const husk = { uid: 920, cardId: 'plague_husk', name: 'Plague Husk', owner: 0, row: 2,
+      atk: 2, def: 3, move: 2, keywords: [], damage: 3, tempA: 0, tempD: 0, permA: 0, permD: 0,
+      augments: [], range: 0, enteredTurn: 0,
+      triggers: { lastword: { kind: 'dmgEnemiesInRow', n: 2 } } };
+    const vic = { uid: 921, cardId: null, name: 'vic', owner: 1, row: 2, atk: 1, def: 2, move: 2,
+      keywords: [], damage: 1, tempA: 0, tempD: 0, permA: 0, permD: 0, augments: [], range: 0,
+      enteredTurn: 0, isToken: true };
+    g.units.push(husk, vic);
+    E.checkDeaths(g, 'test');
+    return g.units.length === 0; // husk dies (3 dmg >= 3 def), blast kills vic
+  })());
+  check('growth swells at turn start', (function () {
+    const seed = { uid: 922, cardId: null, name: 'seed', owner: g.activePlayer === 0 ? 1 : 0,
+      atk: 0, def: 3, move: 2, keywords: [], damage: 0, tempA: 0, tempD: 0, permA: 0, permD: 0,
+      augments: [], range: 0, enteredTurn: 0, row: 2, isToken: true,
+      triggers: { growth: { a: 2, d: 2 } } };
+    g.units.push(seed);
+    g.winner = null;
+    E.endTurn(g); // passes to seed's owner; growth fires at their turn start
+    return seed.permA === 2 && seed.permD === 2;
+  })());
 }
 {
   // Mulligan: first-turn redraw, once only.

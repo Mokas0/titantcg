@@ -731,7 +731,9 @@
     const stats = el('div', 'stats');
     stats.appendChild(el('span', 'atk', `⚔${ea}`));
     stats.appendChild(el('span', 'defn' + (u.damage > 0 ? ' hurt' : ''), `⛨${rd}/${ed}`));
-    if (u.keywords.length) stats.appendChild(el('span', 'kw', u.keywords.join(' ')));
+    const kws = [...u.keywords];
+    if (u.range > 0) kws.push(`🏹${u.range}`);
+    if (kws.length) stats.appendChild(el('span', 'kw', kws.join(' ')));
     chip.appendChild(stats);
     if (u.augments.length) {
       chip.appendChild(el('div', 'augs', u.augments.map(a => '+' + esc(CARDS[a].name)).join(' ')));
@@ -1077,8 +1079,8 @@
         if (assignActor() === me) {
           c.appendChild(ctrlButton('Auto-assign my damage', () => { E.autoAssignFor(G, me); renderAll(); }));
           const defender = E.other(G.activePlayer);
-          const defenderHasAttackers = E.contestedRows(G)
-            .some(r => E.sideInRow(G, r, defender).some(u => E.effAtk(G, u) > 0));
+          const defenderHasAttackers =
+            E.combatants(G, defender).some(u => E.effAtk(G, u) > 0);
           if (G.mpStage !== 'defender' && me === G.activePlayer && defenderHasAttackers) {
             c.appendChild(ctrlButton('Hand over to defender', () => {
               G.mpStage = 'defender';
@@ -1202,46 +1204,43 @@
     panel.replaceChildren();
     panel.appendChild(el('h3', '', 'Assign combat damage — all damage resolves simultaneously'));
     const editable = humanPlayers();
-    for (const r of E.contestedRows(G)) {
-      const rowBox = el('div', 'assign-row');
-      rowBox.appendChild(el('h4', '', `Row ${r + 1}`));
-      for (const p of [0, 1]) {
-        for (const u of E.sideInRow(G, r, p)) {
-          if (E.effAtk(G, u) === 0) continue;
-          const line = el('div', 'assign-unit');
-          const foes = E.sideInRow(G, r, E.other(p));
-          const map = G.assign[u.uid] || (G.assign[u.uid] = {});
-          const assigned = Object.values(map).reduce((a, b) => a + b, 0);
-          line.appendChild(el('span', 'who',
-            `${esc(u.name)} (${E.playerName(p)}) — ⚔${E.effAtk(G, u)}, assigned ${assigned}`));
-          if (!editable.includes(p)) {
-            line.appendChild(el('span', 'stat',
-              online() ? 'Assigned by your opponent' : 'AI assigns automatically'));
-          } else {
-            for (const f of foes) {
-              const t = el('span', 'assign-target');
-              t.appendChild(el('span', '', `${esc(f.name)} ⛨${E.remainingDef(G, f)}`));
-              const minus = el('button', '', '−');
-              const amt = el('span', 'amt', String(map[f.uid] || 0));
-              const plus = el('button', '', '+');
-              minus.onclick = () => {
-                if ((map[f.uid] || 0) > 0) { map[f.uid]--; renderAll(); }
-              };
-              plus.onclick = () => {
-                const total = Object.values(map).reduce((a, b) => a + b, 0);
-                if (total < E.effAtk(G, u)) { map[f.uid] = (map[f.uid] || 0) + 1; renderAll(); }
-              };
-              t.appendChild(minus); t.appendChild(amt); t.appendChild(plus);
-              line.appendChild(t);
-            }
-          }
-          rowBox.appendChild(line);
+    const parts = [...E.combatants(G, 0), ...E.combatants(G, 1)]
+      .sort((a, b) => (a.row - b.row) || (a.owner - b.owner));
+    for (const u of parts) {
+      const { mode, targets } = E.combatTargets(G, u);
+      if (E.effAtk(G, u) === 0 && mode !== 'melee') continue;
+      const line = el('div', 'assign-unit');
+      const map = G.assign[u.uid] || (G.assign[u.uid] = {});
+      const assigned = Object.values(map).reduce((a, b) => a + b, 0);
+      line.appendChild(el('span', 'who',
+        `${esc(u.name)} (${E.playerName(u.owner)}, row ${u.row + 1}) — ⚔${E.effAtk(G, u)}, ` +
+        `${mode === 'ranged' ? `🏹 ranged (optional)` : 'melee'}, assigned ${assigned}`));
+      if (!editable.includes(u.owner)) {
+        line.appendChild(el('span', 'stat',
+          online() ? 'Assigned by your opponent' : 'AI assigns automatically'));
+      } else {
+        for (const f of targets) {
+          const t = el('span', 'assign-target');
+          t.appendChild(el('span', '', `${esc(f.name)} (row ${f.row + 1}) ⛨${E.remainingDef(G, f)}`));
+          const minus = el('button', '', '−');
+          const amt = el('span', 'amt', String(map[f.uid] || 0));
+          const plus = el('button', '', '+');
+          minus.onclick = () => {
+            if ((map[f.uid] || 0) > 0) { map[f.uid]--; renderAll(); }
+          };
+          plus.onclick = () => {
+            const total = Object.values(map).reduce((a, b) => a + b, 0);
+            if (total < E.effAtk(G, u)) { map[f.uid] = (map[f.uid] || 0) + 1; renderAll(); }
+          };
+          t.appendChild(minus); t.appendChild(amt); t.appendChild(plus);
+          line.appendChild(t);
         }
       }
-      panel.appendChild(rowBox);
+      panel.appendChild(line);
     }
     panel.appendChild(el('div', 'stat',
-      'Guard: while a Guard unit stands in the row, enemies must assign it lethal damage before striking others. Unassigned damage is distributed automatically on resolve.'));
+      'Melee units must assign their full attack (auto-completed on resolve); ranged fire is optional and draws no return fire. ' +
+      'Guard: enemies must assign lethal damage to Guard units in a row before striking others there.'));
   }
 
   /* ---------- Log ---------- */

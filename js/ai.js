@@ -152,7 +152,13 @@
         if (rows.length === 0) continue;
         const fwd = E.forward(p);
         // Pick the row furthest toward the enemy edge (advance only).
-        const advance = rows.filter(r => Math.sign(r - u.row) === fwd);
+        let advance = rows.filter(r => Math.sign(r - u.row) === fwd);
+        if (u.range > 0) {
+          // Archers hold position once they have targets, and never
+          // willingly step into melee.
+          if (E.combatTargets(g, u).mode === 'ranged') continue;
+          advance = advance.filter(r => E.sideInRow(g, r, E.other(p)).length === 0);
+        }
         if (advance.length === 0) continue;
         const dest = fwd > 0 ? Math.max(...advance) : Math.min(...advance);
         if (E.moveUnit(g, u.uid, dest).ok) { moved = true; }
@@ -170,7 +176,7 @@
     if (g.fightStep !== 'assign') return false;
     E.autoAssignFor(g, p);
     const humanDefender = !g.players[E.other(p)].isAI &&
-      E.contestedRows(g).some(r => E.sideInRow(g, r, E.other(p)).some(u => E.effAtk(g, u) > 0));
+      E.combatants(g, E.other(p)).some(u => E.effAtk(g, u) > 0);
     return humanDefender;
   }
 

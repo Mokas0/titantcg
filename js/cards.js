@@ -422,6 +422,52 @@
   def({ id: 'grudgekeeper', name: 'Grudgekeeper', type: 'unit', cost: { D: 3, G: 2 }, atk: 2, def: 6,
         rarity: 'rare', keywords: ['bloodrage'], text: 'Bloodrage.' });
 
+  /* ---- Keyword Wave 2: Range and triggered abilities ---- */
+  // Range
+  def({ id: 'ember_archer', name: 'Ember Archer', type: 'unit', cost: { F: 1, G: 1 }, atk: 2, def: 2,
+        range: 1,
+        text: 'Range 1. (While its row is clear, may strike enemies 1 row ahead — no return fire.)' });
+  def({ id: 'longshot_sentry', name: 'Longshot Sentry', type: 'unit', cost: { L: 1, G: 1 }, atk: 1, def: 3,
+        range: 1, text: 'Range 1.' });
+  def({ id: 'thorn_thrower', name: 'Thorn Thrower', type: 'unit', cost: { N: 2, G: 1 }, atk: 2, def: 4,
+        rarity: 'uncommon', range: 1, text: 'Range 1.' });
+  def({ id: 'tidal_arbalest', name: 'Tidal Arbalest', type: 'unit', cost: { W: 2, G: 1 }, atk: 2, def: 3,
+        rarity: 'uncommon', range: 2, text: 'Range 2.' });
+  def({ id: 'stormcaller_battery', name: 'Stormcaller Battery', type: 'unit', cost: { W: 3, G: 2 }, atk: 3, def: 5,
+        rarity: 'rare', range: 2, text: 'Range 2.' });
+  def({ id: 'sunspire_ballista', name: 'Sunspire Ballista', type: 'unit', cost: { L: 3, G: 2 }, atk: 3, def: 4,
+        rarity: 'rare', range: 2, text: 'Range 2.' });
+  // Arrival
+  def({ id: 'herald_of_dawn', name: 'Herald of Dawn', type: 'unit', cost: { L: 2, G: 1 }, atk: 2, def: 3,
+        rarity: 'uncommon', triggers: { arrival: { kind: 'draw', n: 1 } },
+        text: 'Arrival: draw a card.' });
+  def({ id: 'rotting_shambler', name: 'Rotting Shambler', type: 'unit', cost: { D: 2, G: 1 }, atk: 3, def: 3,
+        rarity: 'uncommon', triggers: { arrival: { kind: 'dmgEnemiesInRow', n: 1 } },
+        text: 'Arrival: deal 1 damage to each enemy unit in its row.' });
+  def({ id: 'spring_tender', name: 'Spring Tender', type: 'unit', cost: { N: 2, G: 1 }, atk: 2, def: 3,
+        rarity: 'rare', triggers: { arrival: { kind: 'rampEnergy' } },
+        text: 'Arrival: search your deck for an energy card and put it into your energy row tapped.' });
+  def({ id: 'war_drummer', name: 'War Drummer', type: 'unit', cost: { F: 2, G: 1 }, atk: 2, def: 2,
+        rarity: 'uncommon', triggers: { arrival: { kind: 'buffAlliesInRow', a: 1, d: 0, temp: true } },
+        text: 'Arrival: your other units in its row get +1/+0 until end of turn.' });
+  // Last Word
+  def({ id: 'martyr_of_the_low', name: 'Martyr of the Low', type: 'unit', cost: { L: 1, G: 1 }, atk: 1, def: 3,
+        triggers: { lastword: { kind: 'gainLife', n: 3 } },
+        text: 'Last Word: you gain 3 life.' });
+  def({ id: 'plague_husk', name: 'Plague Husk', type: 'unit', cost: { D: 2, G: 1 }, atk: 2, def: 3,
+        rarity: 'rare', triggers: { lastword: { kind: 'dmgEnemiesInRow', n: 2 } },
+        text: 'Last Word: deal 2 damage to each enemy unit in its row.' });
+  def({ id: 'seed_carrier', name: 'Seed Carrier', type: 'unit', cost: { N: 2, G: 1 }, atk: 2, def: 2,
+        rarity: 'uncommon', triggers: { lastword: { kind: 'tokensHere', count: 1, name: 'Sapling', a: 1, d: 1 } },
+        text: 'Last Word: create a 1/1 Sapling token in its row.' });
+  // Growth
+  def({ id: 'seedling_colossus', name: 'Seedling Colossus', type: 'unit', cost: { N: 2, G: 2 }, atk: 0, def: 3,
+        rarity: 'rare', triggers: { growth: { a: 2, d: 2 } },
+        text: 'Growth: at the start of your turn, this gets +2/+2 permanently.' });
+  def({ id: 'gloom_feeder', name: 'Gloom Feeder', type: 'unit', cost: { D: 2, G: 2 }, atk: 1, def: 4,
+        rarity: 'uncommon', triggers: { growth: { a: 1, d: 1 } },
+        text: 'Growth: at the start of your turn, this gets +1/+1 permanently.' });
+
   /* ---- Expansion Leaders ---- */
   def({ id: 'leader_ashka', name: 'Ashka, Pyre of the Fallen', type: 'leader', cost: { F: 1, D: 1, G: 1 },
         atk: 4, def: 3, keywords: ['hasty'], unique: true, rarity: 'leader', text: 'Hasty.' });

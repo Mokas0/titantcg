@@ -155,6 +155,14 @@ resolved only during the fight phase's later steps.
    Each unit deals damage equal to its attack, and its controller chooses how to split that
    damage among the opposing units in the row. Because damage is simultaneous, both players
    assign before anything resolves. A unit destroyed in the exchange still deals its damage.
+
+   **Ranged combat.** A unit with **Range N** whose own row is uncontested may assign its
+   combat damage to enemy units up to N rows toward the enemy's edge, as if they shared its
+   row. Ranged fire is optional (it may assign any amount up to its attack, including
+   none), draws no return fire from melee, and still respects Guard in the target row. If
+   a ranged unit's own row is contested, it is locked into melee there. Both players'
+   ranged units may fire in any fight phase. Range never allows attacking the player —
+   that remains Siege's province.
 3. **Destruction.** Any unit reduced to 0 defense is destroyed and placed in its owner's
    discard.
 4. **Attacking players.** A unit on the enemy home row that is not required to fight may
@@ -223,3 +231,9 @@ the Chain, the Cascade, the Directive, the Protocol.)*
 - **Phalanx** — +1/+1 while another unit its controller owns shares its row.
 - **Attunement — [type] N** — a stat bonus while its controller has N+ energy of the
   named type in their energy row (Void Rifts count toward any type).
+- **Range N** — while its row is uncontested, may assign combat damage to enemies up to N
+  rows toward the enemy edge; optional, no return fire, Guard applies (see §8).
+- **Arrival** — a triggered ability that fires when the unit enters play.
+- **Last Word** — a triggered ability that fires when the unit is destroyed (including by
+  sacrifice).
+- **Growth** — the unit permanently gains stats at the start of its controller's turn.
