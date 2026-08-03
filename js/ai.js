@@ -46,6 +46,11 @@
 
   /* Play out the active AI player's main phase. Mutates g. */
   function mainPhase(g, p) {
+    // Mulligan a hand with almost no energy or almost nothing but energy.
+    if (E.canMulligan(g, p)) {
+      const en = g.players[p].hand.filter(id => card(id).type === 'energy').length;
+      if (en < 2 || en > 5) E.mulligan(g, p);
+    }
     let acted = true;
     let guard = 0;
     while (acted && g.winner === null && guard++ < 50) {

@@ -13,7 +13,7 @@ deck may contain. Play unfolds across five shared rows stretching between the tw
 Units enter near their controller and must advance row by row through contested ground
 before they can strike the enemy directly.
 
-**Goal:** reduce your opponent's life from 25 to 0.
+**Goal:** reduce your opponent's life from 20 to 0.
 
 ## 2. Deck Construction
 
@@ -104,10 +104,13 @@ its defense reaches 0.
 1. Each player shuffles their deck and places their Leader face-up in their command zone.
 2. Determine who goes first. That player is closest to row 1.
 3. Each player draws an opening hand of **7 cards**.
-4. Each player sets their life to 25.
+4. Each player sets their life to 20.
 
-⚑ Open: mulligan rule; whether the first player skips their first draw. *(The simulator has
-no mulligan and both players draw on every turn, including the first.)*
+**Ruling — mulligan:** once per game, at the start of your first turn (before playing
+anything), you may shuffle your hand into your deck and redraw the same number of cards.
+
+⚑ Open: whether the first player skips their first draw. *(In the simulator both players
+draw on every turn, including the first.)*
 
 ## 7. Turn Structure
 
@@ -194,6 +197,10 @@ the Chain, the Cascade, the Directive, the Protocol.)*
 
 - A player loses when their life total reaches 0.
 - **Ruling:** a player who must draw from an empty deck loses (deck-out).
+- **Ruling — sudden death:** from the 14th full round onward, both players lose life at
+  the start of every turn (1, then escalating by 1 every further round). The uprising
+  cannot be sustained forever; long wars bleed both sides. If both players fall at once,
+  the player whose turn is starting loses.
 
 ⚑ Open: alternate win conditions printed on cards.
 
@@ -209,3 +216,10 @@ the Chain, the Cascade, the Directive, the Protocol.)*
 - **Guard** — enemies in this row must assign lethal damage to Guard units before assigning
   damage to others.
 - **Swift** — this unit's move stat is 3 (one above the default of 2).
+- **Siege** — may attack the enemy player from the row adjacent to their home row,
+  needing only its own row to be uncontested (it lobs over any home-row garrison).
+- **Bloodrage** — +1 attack for each damage marked on it.
+- **Momentum** — gains +1 attack permanently for each row it advances.
+- **Phalanx** — +1/+1 while another unit its controller owns shares its row.
+- **Attunement — [type] N** — a stat bonus while its controller has N+ energy of the
+  named type in their energy row (Void Rifts count toward any type).

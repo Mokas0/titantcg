@@ -74,6 +74,89 @@ expectDeck('void any-number within owned',
 expectDeck('void limited by ownership',
   V('leader_hollow', { energy_fire: 34, void_crawler: 6 }, own), false, /you own 5/);
 
+/* ---------- Keyword & pacing mechanics ---------- */
+function check(label, cond) {
+  if (!cond) { console.error(`mechanic ${label}: FAILED`); bad++; }
+  else console.log(`mechanic ${label}: ok`);
+}
+{
+  const g = E.newGame('fire', 'earth', {});
+  check('starting life is 20', g.players[0].life === 20 && g.players[1].life === 20);
+
+  // Bloodrage: attack grows with marked damage.
+  const br = { uid: 900, cardId: null, name: 'br', owner: 0, row: 1, atk: 1, def: 4, move: 2,
+    keywords: ['bloodrage'], damage: 0, tempA: 0, tempD: 0, permA: 0, permD: 0, augments: [], enteredTurn: 0 };
+  g.units.push(br);
+  const base = E.effAtk(g, br);
+  br.damage = 2;
+  check('bloodrage +1 atk per wound', E.effAtk(g, br) === base + 2);
+  br.damage = 0;
+
+  // Phalanx: +1/+1 only with a rowmate.
+  const ph = { ...br, uid: 901, keywords: ['phalanx'], row: 2 };
+  g.units.push(ph);
+  const alone = [E.effAtk(g, ph), E.effDef(g, ph)];
+  const mate = { ...br, uid: 902, keywords: [], row: 2 };
+  g.units.push(mate);
+  check('phalanx +1/+1 with rowmate',
+    E.effAtk(g, ph) === alone[0] + 1 && E.effDef(g, ph) === alone[1] + 1);
+
+  // Phalanx death cascade: wounded to full base defense, mate dies -> it dies.
+  ph.damage = 4; // base def 4 + phalanx 1 = 5 remaining 1
+  E.destroyUnit(g, mate, 'test');
+  E.checkDeaths(g, 'test');
+  check('phalanx death cascade', !g.units.some(u => u.uid === 901));
+
+  // Attunement: bonus switches on at 4 matching energy.
+  const at = { ...br, uid: 903, keywords: [], attune: { t: 'F', n: 4, a: 2, d: 2 }, row: 1 };
+  g.units.push(at);
+  g.players[0].energy = [1, 2, 3].map(() => ({ cardId: 'energy_fire', provides: 'F', tapped: false }));
+  const offA = E.effAtk(g, at);
+  g.players[0].energy.push({ cardId: 'energy_void', provides: 'ANY', tapped: true });
+  check('attunement on at 4 (void counts, tapped counts)', E.effAtk(g, at) === offA + 2);
+
+  // Momentum: permanent attack per row advanced.
+  const mo = { ...br, uid: 904, keywords: ['momentum'], row: 1, enteredTurn: 0 };
+  g.units.push(mo);
+  E.beginFight(g);
+  E.moveUnit(g, 904, 3);
+  check('momentum +2 after advancing 2 rows', mo.permA === 2);
+
+  // Siege: eligible to attack the player from the adjacent row.
+  g.units.length = 0;
+  const sg = { ...br, uid: 905, keywords: ['siege'], row: 3, atk: 3 };
+  const plain = { ...br, uid: 906, keywords: [], row: 3, atk: 3 };
+  const guardHome = { ...br, uid: 907, owner: 1, row: 4, atk: 1 };
+  g.units.push(sg, plain, guardHome);
+  g.fought = [];
+  E.prepDirect(g);
+  check('siege attacks over the garrison, plain unit cannot',
+    g.directEligible.includes(905) && !g.directEligible.includes(906));
+}
+{
+  // Mulligan: first-turn redraw, once only.
+  const g = E.newGame('fire', 'water', {});
+  const n = g.players[0].hand.length;
+  check('canMulligan on first turn', E.canMulligan(g, 0));
+  check('mulligan redraws same count', E.mulligan(g, 0).ok && g.players[0].hand.length === n);
+  check('no second mulligan', !E.canMulligan(g, 0) && !E.mulligan(g, 0).ok);
+  check('opponent cannot mulligan out of turn', !E.canMulligan(g, 1));
+}
+{
+  // Sudden death: escalating burn once past the threshold.
+  const g = E.newGame('fire', 'water', {});
+  g.turnCount = E.SUDDEN_DEATH_AFTER + 1;
+  const before = [g.players[0].life, g.players[1].life];
+  E.startTurn(g);
+  check('sudden death burns both players',
+    g.players[0].life === before[0] - 1 && g.players[1].life === before[1] - 1);
+  g.players[0].life = 1; g.players[1].life = 1;
+  g.turnCount = E.SUDDEN_DEATH_AFTER + 3;
+  g.activePlayer = 0;
+  E.startTurn(g);
+  check('simultaneous burn-out: turn player loses', g.winner === 1 && g.winReason === 'sudden death');
+}
+
 /* Engine accepts a full deck spec (as used for custom decks and online play). */
 {
   const spec = { name: 'Custom Burn', leader: 'leader_fire', cards: Object.entries(goodDeck) };

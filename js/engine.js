@@ -22,9 +22,12 @@
 
   const HOME_ROW = [0, 4];          // row index of each player's home row (0-based; displayed as 1..5)
   const DEPLOY_ROWS = [[0, 1], [3, 4]];
-  const STARTING_LIFE = 25;
+  const STARTING_LIFE = 20;
   const OPENING_HAND = 7;
   const LEADER_RECAST_STEP = 2;
+  /* After this many player-turns (13 full rounds), sudden death sets in:
+   * both players burn escalating life at the start of every turn. */
+  const SUDDEN_DEATH_AFTER = 26;
 
   function shuffle(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
@@ -73,6 +76,7 @@
       shuffle(deck);
       g.players.push({
         faction: typeof faction === 'string' ? faction : 'custom',
+        mulliganed: false,
         deckName: list.name,
         leaderId: list.leader,
         leaderCasts: 0,       // times cast so far (escalation counter)
@@ -194,6 +198,7 @@
       damage: 0,
       tempA: 0, tempD: 0, permA: 0, permD: 0,
       augments: [],           // cardIds
+      attune: c.attune ? { ...c.attune } : undefined,
       isLeader: !!flags.isLeader,
       isToken: !!flags.isToken,
       enteredTurn: g.turnCount,
@@ -216,11 +221,26 @@
     for (const id of u.augments) n += card(id).effect[key] || 0;
     return n;
   }
+  /* Attunement: +a/+d while the owner controls n+ energy of the given type
+   * (Void Rifts count toward any type). */
+  function attuneBonus(g, u, key) {
+    if (!u.attune) return 0;
+    const n = g.players[u.owner].energy
+      .filter(e => e.provides === u.attune.t || e.provides === 'ANY').length;
+    return n >= u.attune.n ? (u.attune[key] || 0) : 0;
+  }
+  function phalanxBonus(g, u) {
+    return hasKw(u, 'phalanx') && sideInRow(g, u.row, u.owner).length > 1 ? 1 : 0;
+  }
   function effAtk(g, u) {
-    return Math.max(0, u.atk + u.tempA + u.permA + augBonus(u, 'a') + locBonus(g, u.owner, 'a'));
+    let a = u.atk + u.tempA + u.permA + augBonus(u, 'a') + locBonus(g, u.owner, 'a')
+      + phalanxBonus(g, u) + attuneBonus(g, u, 'a');
+    if (hasKw(u, 'bloodrage')) a += u.damage;
+    return Math.max(0, a);
   }
   function effDef(g, u) {
-    return u.def + u.tempD + u.permD + augBonus(u, 'd') + locBonus(g, u.owner, 'd');
+    return u.def + u.tempD + u.permD + augBonus(u, 'd') + locBonus(g, u.owner, 'd')
+      + phalanxBonus(g, u) + attuneBonus(g, u, 'd');
   }
   function remainingDef(g, u) { return effDef(g, u) - u.damage; }
   function hasKw(u, kw) { return u.keywords.includes(kw); }
@@ -243,11 +263,17 @@
   }
 
   /* State-based check: any unit whose damage meets its (possibly reduced)
-   * defense is destroyed. Simultaneous. */
+   * defense is destroyed. Simultaneous, and repeated until stable — a death
+   * can strip a Phalanx bonus and take a wounded neighbor with it. */
   function checkDeaths(g, cause) {
-    const dead = g.units.filter(u => remainingDef(g, u) <= 0);
-    for (const u of dead) destroyUnit(g, u, cause);
-    return dead.length;
+    let total = 0;
+    for (;;) {
+      const dead = g.units.filter(u => remainingDef(g, u) <= 0);
+      if (dead.length === 0) break;
+      for (const u of dead) destroyUnit(g, u, cause);
+      total += dead.length;
+    }
+    return total;
   }
 
   /* ---------- Playing cards (main phases) ---------- */
@@ -582,6 +608,14 @@
     u.row = row;
     g.movedThisFight.push(uid);
     log(g, `${u.name} moves from row ${from + 1} to row ${row + 1}.`);
+    if (hasKw(u, 'momentum')) {
+      const advanced = (row - from) * forward(u.owner);
+      if (advanced > 0) {
+        u.permA += advanced;
+        log(g, `${u.name} gains +${advanced} attack from Momentum.`);
+      }
+    }
+    checkDeaths(g, 'formation broken'); // a departing ally can doom a Phalanx unit
     return { ok: true };
   }
 
@@ -784,10 +818,15 @@
     const p = g.activePlayer;
     const target = enemyHomeRow(p);
     g.directEligible = g.units
-      .filter(u => u.owner === p && u.row === target
-        && sideInRow(g, target, other(p)).length === 0
-        && !g.fought.includes(u.uid)
-        && effAtk(g, u) > 0)
+      .filter(u => {
+        if (u.owner !== p || g.fought.includes(u.uid) || effAtk(g, u) <= 0) return false;
+        // Home-row attackers as normal; Siege units also strike from the
+        // adjacent row, lobbing over any home-row garrison.
+        const inHome = u.row === target;
+        const inSiegeRange = hasKw(u, 'siege') && u.row === target - forward(p);
+        if (!inHome && !inSiegeRange) return false;
+        return sideInRow(g, u.row, other(p)).length === 0;
+      })
       .map(u => u.uid);
     g.fightStep = 'direct';
     if (g.directEligible.length === 0) endFight(g);
@@ -837,14 +876,48 @@
     g.phase = 'main1';
     g.fightStep = null;
     log(g, `— ${playerName(p)}'s turn (turn ${g.turnCount}) —`);
+    // Sudden death: the uprising cannot be sustained forever.
+    if (g.turnCount > SUDDEN_DEATH_AFTER) {
+      const burn = Math.ceil((g.turnCount - SUDDEN_DEATH_AFTER) / 2);
+      for (const q of [0, 1]) g.players[q].life -= burn;
+      log(g, `Sudden death — the long war bleeds both sides for ${burn} life.`);
+      const dead0 = g.players[0].life <= 0, dead1 = g.players[1].life <= 0;
+      if (dead0 && dead1) setWinner(g, other(p), 'sudden death');
+      else if (dead0) setWinner(g, 1, 'sudden death');
+      else if (dead1) setWinner(g, 0, 'sudden death');
+      if (g.winner !== null) return;
+    }
     // Draw phase.
     drawCards(g, p, 1);
+  }
+
+  /* ---------- Mulligan (once, at the start of your first turn) ---------- */
+
+  function canMulligan(g, p) {
+    return g.winner === null && g.activePlayer === p && g.phase === 'main1' &&
+      g.turnCount <= 2 && !g.players[p].mulliganed && !g.energyPlayed;
+  }
+
+  function mulligan(g, p) {
+    if (!canMulligan(g, p)) {
+      return { ok: false, err: 'You may only mulligan at the start of your first turn.' };
+    }
+    const pl = g.players[p];
+    const n = pl.hand.length;
+    pl.deck.push(...pl.hand);
+    pl.hand = [];
+    shuffle(pl.deck);
+    pl.mulliganed = true;
+    drawCards(g, p, n);
+    log(g, `${playerName(p)} mulligans and redraws ${n} cards.`);
+    return { ok: true };
   }
 
   function playerName(p) { return p === 0 ? 'Player One' : 'Player Two'; }
 
   globalThis.Engine = {
-    HOME_ROW, DEPLOY_ROWS, STARTING_LIFE,
+    HOME_ROW, DEPLOY_ROWS, STARTING_LIFE, SUDDEN_DEATH_AFTER,
+    canMulligan, mulligan,
     card, other, homeRow, enemyHomeRow, deployRows, forward, playerName,
     newGame, drawCards, log,
     playEnergy, canPay, payCost, planPayment, leaderCost, costTotal,

@@ -119,7 +119,15 @@ handshake, so your opponent doesn't need your deck to exist on their machine.
 Spells go on the Order: the opponent may respond, and the stack resolves last-in-first-out
 (try Water's *Dispel* to counter a spell mid-Order).
 
-Win by reducing the enemy from 25 life to 0 — or by decking them out.
+Win by reducing the enemy from 20 life to 0 — or by decking them out. From round 14,
+**sudden death** bleeds both players for escalating life each turn, so no war lasts
+forever (the phase bar shows the clock coming). A one-time **mulligan** is offered at the
+start of your first turn, and the fight phase auto-skips when nothing can move or fight.
+
+Five positional keywords ride the row system: **Siege** (attack the player from one row
+out, over the garrison), **Bloodrage** (+1 attack per wound — persistent damage as fuel),
+**Momentum** (permanently stronger for every row advanced), **Phalanx** (+1/+1 in
+formation), and **Attunement** (payoffs for stacking one energy type).
 
 ## Repository layout
 

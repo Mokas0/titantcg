@@ -673,8 +673,14 @@
 
   function renderPhasebar() {
     const seat = online() ? ` · you are ${E.playerName(mySeat())}` : '';
+    let clock = '';
+    if (G.turnCount > E.SUDDEN_DEATH_AFTER) {
+      clock = ` · ☠ sudden death: −${Math.ceil((G.turnCount - E.SUDDEN_DEATH_AFTER) / 2)} life/turn`;
+    } else if (G.turnCount > E.SUDDEN_DEATH_AFTER - 6) {
+      clock = ` · ☠ sudden death in ${Math.ceil((E.SUDDEN_DEATH_AFTER + 1 - G.turnCount) / 2)} rounds`;
+    }
     $('phasebar').innerHTML =
-      `Turn ${G.turnCount} — <b>${E.playerName(G.activePlayer)}</b> — ${phaseName()}${seat}`;
+      `Turn ${G.turnCount} — <b>${E.playerName(G.activePlayer)}</b> — ${phaseName()}${seat}${clock}`;
   }
 
   function renderStats(p) {
@@ -1103,7 +1109,25 @@
     }
     if (!myTurn()) return;
     if (G.phase === 'main1') {
-      c.appendChild(ctrlButton('To Fight Phase ⚔', () => { E.beginFight(G); renderAll(); sync(); }, true));
+      if (E.canMulligan(G, viewPlayer())) {
+        c.appendChild(ctrlButton('Mulligan — redraw hand', () => {
+          const res = E.mulligan(G, viewPlayer());
+          if (!res.ok) banner(res.err);
+          renderAll(); sync();
+        }));
+      }
+      c.appendChild(ctrlButton('To Fight Phase ⚔', () => {
+        E.beginFight(G);
+        // Auto-skip the movement step when nothing can move.
+        const anyMoves = G.units.some(u =>
+          u.owner === G.activePlayer && E.legalMoveRows(G, u).length > 0);
+        if (!anyMoves) {
+          E.finishMoves(G);
+          if (online() && G.fightStep === 'assign') G.mpStage = 'attacker';
+          ui.directInit = false;
+        }
+        renderAll(); sync();
+      }, true));
     } else if (G.phase === 'fight' && G.fightStep === 'move') {
       c.appendChild(ctrlButton('Done Moving', () => {
         ui.moveUid = null;

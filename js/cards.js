@@ -381,6 +381,47 @@
   def({ id: 'verdant_rampart', name: 'Verdant Rampart', type: 'unit', cost: { E: 1, N: 1, G: 1 }, atk: 3, def: 7,
         rarity: 'rare', keywords: ['guard'], text: 'Guard.' });
 
+  /* ---- Keyword Wave 1: Siege, Bloodrage, Momentum, Phalanx, Attunement ---- */
+  // Fire
+  def({ id: 'ashen_berserker', name: 'Ashen Berserker', type: 'unit', cost: { F: 2, G: 1 }, atk: 2, def: 3,
+        rarity: 'uncommon', keywords: ['bloodrage'],
+        text: 'Bloodrage. (+1 attack for each damage marked on it.)' });
+  def({ id: 'charging_destrier', name: 'Charging Destrier', type: 'unit', cost: { F: 1, G: 2 }, atk: 2, def: 2,
+        rarity: 'uncommon', keywords: ['momentum'],
+        text: 'Momentum. (Gains +1 attack permanently for each row it advances.)' });
+  def({ id: 'emberstone_avatar', name: 'Emberstone Avatar', type: 'unit', cost: { F: 3, G: 1 }, atk: 3, def: 3,
+        rarity: 'rare', attune: { t: 'F', n: 4, a: 2, d: 2 },
+        text: 'Attunement — Fire 4: +2/+2 while you control 4+ Fire energy.' });
+  def({ id: 'ember_mortar', name: 'Ember Mortar', type: 'unit', cost: { F: 2, G: 2 }, atk: 3, def: 2,
+        rarity: 'uncommon', keywords: ['siege'],
+        text: "Siege. (May attack the player from the row adjacent to their home row.)" });
+  // Water
+  def({ id: 'tide_ram', name: 'Tide Ram', type: 'unit', cost: { W: 2, G: 1 }, atk: 3, def: 4,
+        rarity: 'uncommon', keywords: ['siege'], text: 'Siege.' });
+  def({ id: 'wavecrash_colossus', name: 'Wavecrash Colossus', type: 'unit', cost: { W: 4, G: 3 }, atk: 6, def: 7,
+        rarity: 'rare', keywords: ['siege'], text: 'Siege.' });
+  def({ id: 'deepspring_oracle', name: 'Deepspring Oracle', type: 'unit', cost: { W: 2, G: 1 }, atk: 2, def: 4,
+        rarity: 'uncommon', attune: { t: 'W', n: 4, a: 1, d: 2 },
+        text: 'Attunement — Water 4: +1/+2 while you control 4+ Water energy.' });
+  // Nature
+  def({ id: 'stampede_alpha', name: 'Stampede Alpha', type: 'unit', cost: { N: 3, G: 2 }, atk: 4, def: 5,
+        rarity: 'rare', keywords: ['momentum'], text: 'Momentum.' });
+  // Earth
+  def({ id: 'quarry_titanborn', name: 'Quarry Titanborn', type: 'unit', cost: { E: 3, G: 2 }, atk: 3, def: 6,
+        rarity: 'uncommon', attune: { t: 'E', n: 4, a: 1, d: 3 },
+        text: 'Attunement — Earth 4: +1/+3 while you control 4+ Earth energy.' });
+  // Light
+  def({ id: 'line_holder', name: 'Line Holder', type: 'unit', cost: { L: 1, G: 1 }, atk: 2, def: 2,
+        keywords: ['phalanx'],
+        text: 'Phalanx. (+1/+1 while another unit you control is in its row.)' });
+  def({ id: 'shield_sister', name: 'Shield Sister', type: 'unit', cost: { L: 2, G: 1 }, atk: 3, def: 3,
+        rarity: 'uncommon', keywords: ['phalanx'], text: 'Phalanx.' });
+  // Dark
+  def({ id: 'pit_brawler', name: 'Pit Brawler', type: 'unit', cost: { D: 1, G: 1 }, atk: 1, def: 4,
+        keywords: ['bloodrage'], text: 'Bloodrage.' });
+  def({ id: 'grudgekeeper', name: 'Grudgekeeper', type: 'unit', cost: { D: 3, G: 2 }, atk: 2, def: 6,
+        rarity: 'rare', keywords: ['bloodrage'], text: 'Bloodrage.' });
+
   /* ---- Expansion Leaders ---- */
   def({ id: 'leader_ashka', name: 'Ashka, Pyre of the Fallen', type: 'leader', cost: { F: 1, D: 1, G: 1 },
         atk: 4, def: 3, keywords: ['hasty'], unique: true, rarity: 'leader', text: 'Hasty.' });
