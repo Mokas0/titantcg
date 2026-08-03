@@ -129,10 +129,11 @@ phase.
 
 ### Movement
 
-Movement does not cost energy — **move** is a unit stat (default 1: one row toward or away
-from any edge; keywords may raise it). During the fight phase's movement step, each unit
-the turn player controls may move once. A unit that entered play this turn may not move
-unless it has an ability permitting it (e.g. **Hasty**).
+Movement does not cost energy — **move** is a unit stat (default 2: up to two rows toward
+or away from any edge; keywords may raise it, e.g. **Swift** grants 3). During the fight
+phase's movement step, each unit the turn player controls may move once. A unit that
+entered play this turn may not move unless it has an ability permitting it (e.g.
+**Hasty**).
 
 **Ruling — blocking:** enemy units block advancement unless an ability says otherwise. A
 unit that shares a row with enemy units cannot advance (it may still retreat), and a moving
@@ -207,4 +208,4 @@ the Chain, the Cascade, the Directive, the Protocol.)*
 - **Hasty** — this unit may move (and attack) the turn it enters play.
 - **Guard** — enemies in this row must assign lethal damage to Guard units before assigning
   damage to others.
-- **Swift** — this unit's move stat is 2.
+- **Swift** — this unit's move stat is 3 (one above the default of 2).

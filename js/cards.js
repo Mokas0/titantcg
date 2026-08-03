@@ -9,7 +9,8 @@
 
   const C = {};
   function def(card) {
-    card.move = card.move ?? (card.type === 'unit' || card.type === 'leader' ? 1 : 0);
+    // Base movement is 2 rows per turn; Swift units carry an explicit 3.
+    card.move = card.move ?? (card.type === 'unit' || card.type === 'leader' ? 2 : 0);
     card.keywords = card.keywords || [];
     card.rarity = card.rarity || 'common';
     C[card.id] = card;
@@ -76,9 +77,9 @@
         effect: { kind: 'draw', n: 1 }, target: null, text: 'Draw a card.' });
   // Uncommons
   def({ id: 'current_rider', name: 'Current Rider', type: 'unit', cost: { W: 2 }, atk: 2, def: 3,
-        rarity: 'uncommon', move: 2, keywords: ['swift'], text: 'Swift. (May move up to 2 rows.)' });
+        rarity: 'uncommon', move: 3, keywords: ['swift'], text: 'Swift. (May move up to 3 rows.)' });
   def({ id: 'mist_dancer', name: 'Mist Dancer', type: 'unit', cost: { W: 1, G: 1 }, atk: 2, def: 2,
-        rarity: 'uncommon', move: 2, keywords: ['swift'], text: 'Swift.' });
+        rarity: 'uncommon', move: 3, keywords: ['swift'], text: 'Swift.' });
   def({ id: 'undertow', name: 'Undertow', type: 'spell', cost: { W: 1, G: 1 },
         rarity: 'uncommon', effect: { kind: 'bounce' }, target: 'anyUnit', text: "Return target unit to its owner's hand." });
   def({ id: 'dispel', name: 'Dispel', type: 'spell', cost: { W: 2 },
@@ -286,7 +287,7 @@
   /* ---- Water ---- */
   def({ id: 'pearl_diver', name: 'Pearl Diver', type: 'unit', cost: { W: 1, G: 1 }, atk: 2, def: 2, text: '' });
   def({ id: 'stream_spirit', name: 'Stream Spirit', type: 'unit', cost: { W: 1 }, atk: 1, def: 2,
-        move: 2, keywords: ['swift'], text: 'Swift.' });
+        move: 3, keywords: ['swift'], text: 'Swift.' });
   def({ id: 'soothing_springs', name: 'Soothing Springs', type: 'spell', cost: { W: 1 },
         effect: { kind: 'heal', n: 2 }, target: 'anyUnit', text: 'Remove 2 damage from target unit.' });
   def({ id: 'tempest_caller', name: 'Tempest Caller', type: 'unit', cost: { W: 3, G: 1 }, atk: 4, def: 4,
@@ -374,7 +375,7 @@
   def({ id: 'mirrorlight_sentinel', name: 'Mirrorlight Sentinel', type: 'unit', cost: { W: 1, L: 1, G: 1 }, atk: 4, def: 5,
         rarity: 'rare', text: '' });
   def({ id: 'drowned_whisperer', name: 'Drowned Whisperer', type: 'unit', cost: { W: 1, D: 1, G: 1 }, atk: 4, def: 4,
-        rarity: 'rare', move: 2, keywords: ['swift'], text: 'Swift.' });
+        rarity: 'rare', move: 3, keywords: ['swift'], text: 'Swift.' });
   def({ id: 'citadel_colossus', name: 'Citadel Colossus', type: 'unit', cost: { E: 1, L: 1, G: 2 }, atk: 5, def: 8,
         rarity: 'rare', keywords: ['guard'], text: 'Guard.' });
   def({ id: 'verdant_rampart', name: 'Verdant Rampart', type: 'unit', cost: { E: 1, N: 1, G: 1 }, atk: 3, def: 7,
@@ -388,7 +389,7 @@
   def({ id: 'leader_serelia', name: 'Serelia, Mirror Magistrate', type: 'leader', cost: { W: 1, L: 1, G: 1 },
         atk: 3, def: 4, unique: true, rarity: 'leader', text: '' });
   def({ id: 'leader_nix', name: 'Nix, Whisper of the Depths', type: 'leader', cost: { W: 1, D: 1, G: 1 },
-        atk: 3, def: 3, move: 2, keywords: ['swift'], unique: true, rarity: 'leader', text: 'Swift.' });
+        atk: 3, def: 3, move: 3, keywords: ['swift'], unique: true, rarity: 'leader', text: 'Swift.' });
   def({ id: 'leader_ossic', name: 'Tribune Ossic, the Adamant', type: 'leader', cost: { E: 1, L: 1, G: 1 },
         atk: 2, def: 6, keywords: ['guard'], unique: true, rarity: 'leader', text: 'Guard.' });
   def({ id: 'leader_thaelen', name: 'Thaelen, Root-Warden', type: 'leader', cost: { E: 1, N: 1, G: 2 },
@@ -492,6 +493,13 @@
   /* ---------- Booster packs ----------
    * 8 cards: 5 commons, 2 uncommons, 1 rare — 15% of rare slots upgrade
    * to a titan. Drawn from the full collectible pool, Void included. */
+  /* ---------- Dust economy ----------
+   * Duplicates disenchant into dust; dust crafts any collectible. */
+  const DUST = {
+    disenchant: { common: 5, uncommon: 20, rare: 100, titan: 400 },
+    craft: { common: 40, uncommon: 100, rare: 400, titan: 1600 },
+  };
+
   const PACK = {
     size: 8,
     slots: [
@@ -544,6 +552,7 @@
   globalThis.TCG_DECKS = DECKS;
   globalThis.TCG_VALIDATE_DECK = validateDeck;
   globalThis.TCG_PACK = PACK;
+  globalThis.TCG_DUST = DUST;
   globalThis.TCG_COLLECTIBLES = COLLECTIBLES;
   globalThis.TCG_COST_SYMBOLS = costSymbols;
   globalThis.TCG_ENERGY_NAMES = ENERGY_NAMES;

@@ -24,6 +24,12 @@ for (const c of Object.values(CARDS)) {
   if (c.effect && !KNOWN_KINDS.has(c.effect.kind)) { console.error(`unknown effect kind on ${c.id}: ${c.effect.kind}`); bad++; }
   if (c.target && !KNOWN_TARGETS.has(c.target)) { console.error(`unknown target on ${c.id}: ${c.target}`); bad++; }
   if ((c.type === 'unit' || c.type === 'leader') && !(c.atk >= 0 && c.def > 0)) { console.error(`bad stats on ${c.id}`); bad++; }
+  if ((c.type === 'unit' || c.type === 'leader') && c.move < 2) { console.error(`${c.id} moves ${c.move} — base movement is 2`); bad++; }
+  if ((c.type === 'unit' || c.type === 'leader') && c.keywords.includes('swift') && c.move !== 3) { console.error(`swift unit ${c.id} should have move 3`); bad++; }
+}
+for (const r of ['common', 'uncommon', 'rare', 'titan']) {
+  const D = globalThis.TCG_DUST;
+  if (!(D.disenchant[r] > 0 && D.craft[r] > D.disenchant[r])) { console.error(`bad dust rates for ${r}`); bad++; }
 }
 for (const [key, d] of Object.entries(globalThis.TCG_DECKS)) {
   const size = d.cards.reduce((s, [, n]) => s + n, 0);

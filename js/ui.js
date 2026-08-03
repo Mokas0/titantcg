@@ -31,10 +31,14 @@
     try {
       const d = JSON.parse(localStorage.getItem(STORE_KEY));
       if (d && typeof d === 'object') {
-        return { packs: Number.isInteger(d.packs) ? d.packs : 5, cards: d.cards || {} };
+        return {
+          packs: Number.isInteger(d.packs) ? d.packs : 5,
+          cards: d.cards || {},
+          dust: Number.isInteger(d.dust) ? d.dust : 0,
+        };
       }
     } catch (e) { /* first run or storage unavailable */ }
-    return { packs: 5, cards: {} };
+    return { packs: 5, cards: {}, dust: 0 };
   }
   const collection = loadCollection();
   function saveCollection() {
@@ -147,9 +151,52 @@
   function renderPacks() {
     $('packinfo').innerHTML =
       `You have <b>${collection.packs}</b> unopened pack${collection.packs === 1 ? '' : 's'} · ` +
-      `${Object.values(collection.cards).reduce((a, b) => a + b, 0)} cards collected`;
+      `${Object.values(collection.cards).reduce((a, b) => a + b, 0)} cards collected · ` +
+      `<b>✦ ${collection.dust}</b> dust`;
     $('openpack').disabled = collection.packs <= 0;
     if ($('collection').style.display !== 'none') renderCollection();
+  }
+
+  /* ---------- Dust economy ---------- */
+
+  const DUST = globalThis.TCG_DUST;
+
+  /* Copies beyond the 3 you can ever run (dust fodder). */
+  function extraCopies() {
+    let dust = 0, count = 0;
+    for (const [id, n] of Object.entries(collection.cards)) {
+      if (n > 3) { count += n - 3; dust += (n - 3) * DUST.disenchant[CARDS[id].rarity]; }
+    }
+    return { count, dust };
+  }
+
+  function disenchant(id) {
+    if (!(collection.cards[id] > 0)) return;
+    collection.cards[id]--;
+    if (collection.cards[id] === 0) delete collection.cards[id];
+    collection.dust += DUST.disenchant[CARDS[id].rarity];
+    saveCollection();
+    renderPacks(); renderCollection();
+  }
+
+  function craft(id) {
+    const cost = DUST.craft[CARDS[id].rarity];
+    if (collection.dust < cost) return;
+    collection.dust -= cost;
+    collection.cards[id] = (collection.cards[id] || 0) + 1;
+    saveCollection();
+    renderPacks(); renderCollection();
+  }
+
+  function disenchantExtras() {
+    const { count, dust } = extraCopies();
+    if (count === 0) return;
+    for (const [id, n] of Object.entries(collection.cards)) {
+      if (n > 3) collection.cards[id] = 3;
+    }
+    collection.dust += dust;
+    saveCollection();
+    renderPacks(); renderCollection();
   }
 
   function openPack() {
@@ -180,6 +227,17 @@
   function renderCollection() {
     const box = $('collection');
     box.replaceChildren();
+    // Dust bar: balance, rates, and one-click disenchanting of extras.
+    const extras = extraCopies();
+    const bar = el('div', 'dust-bar');
+    bar.appendChild(el('span', '', `<b>✦ ${collection.dust}</b> dust — disenchant duplicates, craft any card you're missing`));
+    const deBtn = el('button', '', extras.count > 0
+      ? `Disenchant ${extras.count} extra cop${extras.count === 1 ? 'y' : 'ies'} (+✦ ${extras.dust})`
+      : 'No extra copies (beyond 3) to disenchant');
+    deBtn.disabled = extras.count === 0;
+    deBtn.onclick = disenchantExtras;
+    bar.appendChild(deBtn);
+    box.appendChild(bar);
     for (const [sym, label] of FACTION_ORDER) {
       const ids = COLLECTIBLES.filter(id => {
         const syms = costSymbols(CARDS[id]);
@@ -193,7 +251,19 @@
       const group = el('div', 'coll-group');
       for (const id of ids) {
         const n = collection.cards[id] || 0;
-        group.appendChild(cardFace(CARDS[id], { count: n, extraClass: n === 0 ? 'unowned' : '' }));
+        const c = CARDS[id];
+        const face = cardFace(c, { count: n, extraClass: n === 0 ? 'unowned' : '' });
+        const actions = el('div', 'dust-actions');
+        const craftBtn = el('button', '', `Craft ✦${DUST.craft[c.rarity]}`);
+        craftBtn.disabled = collection.dust < DUST.craft[c.rarity];
+        craftBtn.onclick = ev => { ev.stopPropagation(); craft(id); };
+        const deBtn = el('button', '', `Dust +✦${DUST.disenchant[c.rarity]}`);
+        deBtn.disabled = n === 0;
+        deBtn.onclick = ev => { ev.stopPropagation(); disenchant(id); };
+        actions.appendChild(craftBtn);
+        actions.appendChild(deBtn);
+        face.appendChild(actions);
+        group.appendChild(face);
       }
       box.appendChild(group);
     }

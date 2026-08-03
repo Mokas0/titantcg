@@ -3,7 +3,7 @@
  * Pure game logic, no DOM. UI (js/ui.js) and AI (js/ai.js) drive it.
  *
  * Locked rulings from the draft's open questions:
- *  - Movement is free (no energy cost); "move" is a unit stat (default 1).
+ *  - Movement is free (no energy cost); "move" is a unit stat (default 2).
  *  - Enemy units block advancement: a unit in a contested row cannot advance,
  *    and a moving unit stops when it enters an enemy-occupied row.
  *  - Movement is declared during the fight phase (movement step), turn player only.

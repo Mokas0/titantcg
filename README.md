@@ -66,6 +66,22 @@ The main menu has a **booster pack** opener: each pack holds 8 cards — 5 commo
 5 packs and earn 2 more every time you finish a game. Your collection is saved in the
 browser (localStorage) and can be browsed per faction from the menu.
 
+### Dust
+
+Duplicates aren't dead weight: every card in the collection view has **Dust** (disenchant)
+and **Craft** buttons, and a one-click button disenchants every copy beyond the 3 you can
+run. Rates per rarity:
+
+| Rarity | Disenchant | Craft |
+| --- | --- | --- |
+| Common | ✦ 5 | ✦ 40 |
+| Uncommon | ✦ 20 | ✦ 100 |
+| Rare | ✦ 100 | ✦ 400 |
+| Titan | ✦ 400 | ✦ 1600 |
+
+Your dust balance shows in the menu and persists with the collection — open packs, dust
+the extras, craft the exact cards your deck is missing.
+
 ## Deck builder
 
 Pack pulls are playable: the **Deck Builder** (main menu) builds custom decks from your
@@ -90,8 +106,9 @@ handshake, so your opponent doesn't need your deck to exist on their machine.
    highlighted row to deploy it, click your Leader chip to cast it (recasts cost +2 generic
    each time), play actions/augments/locations, or cast spells onto **the Order**.
 3. **Fight phase**
-   - *Movement step* — click one of your units, then a highlighted row. Units in a contested
-     row cannot advance; moving into an enemy-occupied row ends that unit's movement.
+   - *Movement step* — click one of your units, then a highlighted row. Units move up to
+     **2 rows** per turn (Swift units 3). Units in a contested row cannot advance; moving
+     into an enemy-occupied row ends that unit's movement.
    - *Assign damage* — split each unit's attack among enemies in its row (Guard units must
      be assigned lethal damage first). Anything left unassigned is distributed automatically.
      All damage resolves simultaneously; damage is persistent.
